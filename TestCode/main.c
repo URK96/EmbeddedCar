@@ -6,7 +6,7 @@
 #include <sys/time.h>
 #include <errno.h>
 #include <syslog.h>
-
+//주석
 #include "util.h"
 
 #include "display-kms.h"
