@@ -379,11 +379,6 @@ void * input_thread(void *arg)
 
 static struct thr_data* pexam_data = NULL;
 
-/**
-  * @brief  handling an SIGINT(CTRL+C) signal
-  * @param  sig: signal type
-  * @retval none
-  */
 void signal_handler(int sig)
 {
     if(sig == SIGINT) {
@@ -415,7 +410,7 @@ int main(int argc, char **argv)
     struct vpe *vpe;
     struct thr_data tdata;
     int disp_argc = 3;
-    char* disp_argv[] = {"dummy", "-s", "4:480x272", "\0"}; // ÃßÈÄ º¯°æ ¿©ºÎ È®ÀÎ ÈÄ Ã³¸®..
+    char* disp_argv[] = {"dummy", "-s", "4:480x272", "\0"}; // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ È®ï¿½ï¿½ ï¿½ï¿½ Ã³ï¿½ï¿½..
     int ret = 0;
 
     printf("-- 6_camera_opencv_disp example Start --\n");
