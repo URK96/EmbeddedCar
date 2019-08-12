@@ -11,10 +11,19 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/objdetect/objdetect.hpp>
 
+#include "exam_cv.h"
+
 #define PI 3.1415926
 
 using namespace std;
 using namespace cv;
+
+typedef enum
+{
+    STRAIGHT,
+    CURVELEFT,
+    CURVERIGHT
+}DrivingMode;
 
 extern "C" {
 
@@ -168,8 +177,9 @@ void OpenCV_canny_edge_image(char* file, unsigned char* outBuf, int nw, int nh)
              nh : height value of destination buffer
   * @retval none
   */
-void OpenCV_hough_transform(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh)
+CvPoint OpenCV_hough_transform(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, int* mode)
 {
+    CvPoint ptv = {0,0};
     Scalar lineColor = cv::Scalar(255,255,255);
     
     Mat dstRGB(nh, nw, CV_8UC3, outBuf);
@@ -184,41 +194,128 @@ void OpenCV_hough_transform(unsigned char* srcBuf, int iw, int ih, unsigned char
     
     // 선 감지 위한 허프 변환
     std::vector<cv::Vec2f> lines;
-    cv::HoughLines(contours, lines, 1, PI/180, // 단계별 크기 (1과 π/180에서 단계별로 가능한 모든 각도로 반지름의 선을 찾음)
-        80);  // 투표(vote) 최대 개수
-    
+    cv::HoughLines(contours, lines, 1, PI/180, 55);  // 투표(vote) 최대 개수
+   
+
     // 선 그리기
     cv::Mat result(contours.rows, contours.cols, CV_8UC3, lineColor);
     //printf("Lines detected: %d\n", lines.size());
 
-    // 선 벡터를 반복해 선 그리기
-    std::vector<cv::Vec2f>::const_iterator it= lines.begin();
+    float temp[2][2] = {{0,0}, {0,0}};
+
+    std::vector<cv::Vec2f>::const_iterator it=lines.begin();
+
     while (it!=lines.end()) 
     {
         float rho = (*it)[0];   // 첫 번째 요소는 rho 거리
         float theta = (*it)[1]; // 두 번째 요소는 델타 각도
-        
-        if (theta < PI/4. || theta > 3.*PI/4.) // 수직 행
-        {
-            cv::Point pt1(rho/cos(theta), 0); // 첫 행에서 해당 선의 교차점   
-            cv::Point pt2((rho-result.rows*sin(theta))/cos(theta), result.rows);
-            // 마지막 행에서 해당 선의 교차점
-            cv::line(srcRGB, pt1, pt2, lineColor, 1); // 하얀 선으로 그리기
 
-        } 
-        else // 수평 행
-        { 
-            cv::Point pt1(0,rho/sin(theta)); // 첫 번째 열에서 해당 선의 교차점  
-            cv::Point pt2(result.cols,(rho-result.cols*cos(theta))/sin(theta));
-            // 마지막 열에서 해당 선의 교차점
-            cv::line(srcRGB, pt1, pt2, lineColor, 1); // 하얀 선으로 그리기
+        if(theta > 1.3 && theta < 1.7)
+        {
+            ++it;
+            continue;
         }
-        //printf("line: rho=%f, theta=%f\n", rho, theta);
+
+        if (theta < PI/2.)
+        {
+            if (temp[0][1] < theta)
+            {
+                temp[0][0] = rho;
+                temp[0][1] = theta;
+            }
+        }
+        else
+        {
+            if (temp[1][1] < theta)
+            {
+                temp[1][0] = rho;
+                temp[1][1] = theta;
+            }
+        }
+
         ++it;
     }
 
+    if (temp[0][1] && temp[1][1])
+    {
+        cv::Point pt1(0, temp[0][0]/sin(temp[0][1]));
+	    cv::Point pt2(result.cols, (temp[0][0]-result.cols*cos(temp[0][1]))/sin(temp[0][1]));
+	    cv::line(srcRGB, pt1, pt2, lineColor, 1);
+
+        cv::Point pt3(0, temp[1][0]/sin(temp[1][1]));
+        cv::Point pt4(result.cols, (temp[1][0]-result.cols*cos(temp[1][1]))/sin(temp[1][1]));
+        cv::line(srcRGB, pt3, pt4, lineColor, 1);
+
+        ptv = CalVanishPoint(pt1, pt2, pt3, pt4);
+
+        *mode = 0;
+    }
+    else if (temp[0][1] && !temp[1][1])
+    {
+        cv::Point pt1(0, temp[0][0]/sin(temp[0][1]));
+	    cv::Point pt2(result.cols, (temp[0][0]-result.cols*cos(temp[0][1]))/sin(temp[0][1]));
+	    cv::line(srcRGB, pt1, pt2, lineColor, 1);
+
+        *mode = 1;
+    }
+    else if (!temp[0][1] && temp[1][1])
+    {
+        cv::Point pt1(0, temp[1][0]/sin(temp[1][1]));
+	    cv::Point pt2(result.cols, (temp[1][0]-result.cols*cos(temp[1][1]))/sin(temp[1][1]));
+	    cv::line(srcRGB, pt1, pt2, lineColor, 1);
+
+        *mode = 2;
+    }
+    else
+        return ptv;
+
+	//if(!temp[0][1] && !temp[1][1])
+		//return ptv;
+
+	/* left line */
+	//cv::Point pt1(0, temp[0][0]/sin(temp[0][1]));
+	//cv::Point pt2(result.cols, (temp[0][0]-result.cols*cos(temp[0][1]))/sin(temp[0][1]));
+	//cv::line(srcRGB, pt1, pt2, lineColor, 1);
+
+	/* right line */
+    //cv::Point pt3(0, temp[1][0]/sin(temp[1][1]));
+    //cv::Point pt4(result.cols, (temp[1][0]-result.cols*cos(temp[1][1]))/sin(temp[1][1]));
+    //cv::line(srcRGB, pt3, pt4, lineColor, 1);
+
+#if 0
+	cv::circle(srcRGB, pt1, 10, (0,0,255));
+	cv::circle(srcRGB, pt2, 10, (0,0,255));
+	cv::circle(srcRGB, pt3, 10, (0,0,255));
+	cv::circle(srcRGB, pt4, 10, (0,0,255));
+#endif
+
+#if 0
+	printf("pt1 : %d %d\n", pt1.x, pt1.y);
+	printf("pt2 : %d %d\n", pt2.x, pt2.y);
+	printf("pt3 : %d %d\n", pt3.x, pt3.y);
+	printf("pt4 : %d %d\n", pt4.x, pt4.y);
+#endif
+
+    
+
+    printf("vanish point : %d %d\n", ptv.x, ptv.y);
+    cv::circle(srcRGB, ptv, 7, (255,255,255), 3);
+
     cv::resize(srcRGB, dstRGB, cv::Size(nw, nh), 0, 0, CV_INTER_LINEAR);
+
+    return ptv;
 }
+
+CvPoint CalVanishPoint(CvPoint pt1, CvPoint pt2, CvPoint pt3, CvPoint pt4)
+{
+	CvPoint ptv = {0,0};	
+	
+	ptv.x = 320 * (pt3.y-pt1.y) / (pt2.y-pt1.y+pt3.y-pt4.y);
+	ptv.y = (pt2.y-pt1.y) * ptv.x / 320 + pt1.y;
+
+	return ptv;
+}
+
 
 /**
   * @brief  Merge two source images of the same size into the output buffer.

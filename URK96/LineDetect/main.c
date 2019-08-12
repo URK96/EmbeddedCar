@@ -6,7 +6,10 @@
 #include <sys/time.h>
 #include <errno.h>
 #include <syslog.h>
-//주석
+
+#include <opencv/highgui.h>
+#include <opencv/cv.h>
+
 #include "util.h"
 
 #include "display-kms.h"
@@ -15,6 +18,7 @@
 #include "drawing.h"
 #include "input_cmd.h"
 #include "exam_cv.h"
+#include "car_lib.h"
 
 
 #define CAPTURE_IMG_W       1280
@@ -55,6 +59,13 @@ typedef enum {
     DUMP_DONE
 }DumpState;
 
+typedef enum
+{
+    STRAIGHT,
+    CURVELEFT,
+    CURVERIGHT
+}DrivingMode;
+
 typedef struct _DumpMsg{
     long type;
     int  state_msg;
@@ -72,8 +83,45 @@ struct thr_data {
     int msgq_id;
     bool bfull_screen;
     bool bstream_start;
-    pthread_t threads[3];
+    pthread_t threads[5];
 };
+
+/* variable declare */
+CvPoint vanishP;
+
+int speed, posInit, posDes;
+unsigned char gain;
+bool enablePositionSpeed;
+DrivingMode dMode;
+
+void* positionSpeedControl(void *arg)
+{
+    int position, posRead;
+
+    position = 0;
+    posRead = 0;
+
+    while (1)
+    {
+        if (enablePositionSpeed)
+        {
+            SpeedControlOnOff_Write(CONTROL);
+            
+            DesireSpeed_Write(speed);
+    
+            PositionControlOnOff_Write(CONTROL);
+
+            PositionProportionPoint_Write(gain);
+
+            EncoderCounter_Write(posInit);
+            
+            position = posInit + posDes;
+            DesireEncoderCount_Write(position);
+        }
+        
+        usleep(100000);
+    }
+}
 
 /**
   * @brief  Alloc vpe input buffer and a new buffer object
@@ -159,6 +207,7 @@ static void hough_transform(struct display *disp, struct buffer *cambuf)
     unsigned char srcbuf[VPE_OUTPUT_W*VPE_OUTPUT_H*3];
     uint32_t optime;
     struct timeval st, et;
+    int mode;
 
     unsigned char* cam_pbuf[4];
     if(get_framebuf(cambuf, cam_pbuf) == 0) {
@@ -166,7 +215,20 @@ static void hough_transform(struct display *disp, struct buffer *cambuf)
 
         gettimeofday(&st, NULL);
 
-        OpenCV_hough_transform(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H);
+        vanishP = OpenCV_hough_transform(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, &mode);
+
+        switch (mode)
+        {
+            case 0:
+                dMode = STRAIGHT;
+                break;
+            case 1:
+                dMode = CURVERIGHT;
+                break;
+            case 2:
+                dMode = CURVELEFT;
+                break;
+        }
 
         gettimeofday(&et, NULL);
         optime = ((et.tv_sec - st.tv_sec)*1000)+ ((int)et.tv_usec/1000 - (int)st.tv_usec/1000);
@@ -377,8 +439,82 @@ void * input_thread(void *arg)
     return NULL;
 }
 
+void * MoveThread(void *arg)
+{
+    struct thr_data *data = (struct thr_data *)arg;
+
+    while (1)
+
+    return NULL;
+}
+
+void * ValanceThread(void *arg)
+{
+    struct thr_data *data = (struct thr_data *)arg;
+    int valanceDegree = 1530;
+    int centerX = 170;
+
+    SteeringServoControl_Write(valanceDegree);
+
+    while (1)
+    {
+        int gap = vanishP.x - centerX;
+        int gapDiff = 10;
+        int gapTick = gap / gapDiff;
+        int sleepTick = 500000;
+        if (dMode == STRAIGHT)
+        {
+            if (gap <= -gapDiff)
+            {
+                SteeringServoControl_Write(valanceDegree + gapTick * 40);
+                usleep(sleepTick);
+                SteeringServoControl_Write(valanceDegree - gapTick * 40);
+                usleep(sleepTick);
+                SteeringServoControl_Write(valanceDegree);
+            }
+            else if (gap >= gapDiff)
+            {
+                SteeringServoControl_Write(valanceDegree - gapTick * 40);
+                usleep(sleepTick);
+                SteeringServoControl_Write(valanceDegree + gapTick * 40);
+                usleep(sleepTick);
+                SteeringServoControl_Write(valanceDegree);
+            }
+            else
+                SteeringServoControl_Write(valanceDegree);
+        }
+        else if (dMode == CURVERIGHT)
+        {
+            int steerDegree = valanceDegree;
+            int cameraXDegree = 1500;
+
+            while (steerDegree <= 1900)
+            {
+                steerDegree += 50;
+                cameraXDegree += 20;
+                SteeringServoControl_Write(steerDegree);
+                CameraXServoControl_Write(cameraXDegree);
+            }
+        }
+        else if (dMode == CURVELEFT)
+        {
+
+        }
+
+        usleep(50000);
+    }
+
+
+    return NULL;
+}
+
 static struct thr_data* pexam_data = NULL;
 
+/**
+  * @brief  handling an SIGINT(CTRL+C) signal
+  * @param  sig: signal type
+  * @retval none
+  */
 void signal_handler(int sig)
 {
     if(sig == SIGINT) {
@@ -410,8 +546,10 @@ int main(int argc, char **argv)
     struct vpe *vpe;
     struct thr_data tdata;
     int disp_argc = 3;
-    char* disp_argv[] = {"dummy", "-s", "4:480x272", "\0"}; // ���� ���� ���� Ȯ�� �� ó��..
+    char* disp_argv[] = {"dummy", "-s", "4:480x272", "\0"}; // \C3\DF\C8\C4 \BA\AF\B0\E6 \BF\A9\BA\CE Ȯ\C0\CE \C8\C4 ó\B8\AE..
     int ret = 0;
+
+	CarControlInit();
 
     printf("-- 6_camera_opencv_disp example Start --\n");
 
@@ -476,6 +614,15 @@ int main(int argc, char **argv)
         return -1;
     }
 
+    CameraXServoControl_Write(1500);
+    CameraYServoControl_Write(1650);  
+
+    posInit = 0;
+    posDes = 150;
+    gain = 10;
+    speed = 100;
+    enablePositionSpeed = true;
+
     pexam_data = &tdata;
 
     ret = pthread_create(&tdata.threads[0], NULL, capture_thread, &tdata);
@@ -495,6 +642,18 @@ int main(int argc, char **argv)
         MSG("Failed creating input thread");
     }
     pthread_detach(tdata.threads[2]);
+
+    ret = pthread_create(&tdata.threads[3], NULL, ValanceThread, &tdata);
+    if(ret) {
+        MSG("Failed creating input thread");
+    }
+    pthread_detach(tdata.threads[3]);
+
+    ret = pthread_create(&tdata.threads[4], NULL, positionSpeedControl, &tdata);
+    if(ret) {
+        MSG("Failed creating input thread");
+    }
+    pthread_detach(tdata.threads[4]);
 
     /* register signal handler for <CTRL>+C in order to clean up */
     if(signal(SIGINT, signal_handler) == SIG_ERR) {
