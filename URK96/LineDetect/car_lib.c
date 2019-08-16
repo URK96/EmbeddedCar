@@ -285,7 +285,7 @@ void SpeedPIDProportional_Write(unsigned char gain)
     buf[3] = gain; 
     buf[4] = 0x96 + buf[3]; //checksum = 90 + 03 + 01 + buf[3]
     
-    printf("SpeedPIDProportional_WriteH = %d\n", buf[3]);
+    //printf("SpeedPIDProportional_WriteH = %d\n", buf[3]);
     write(uart_fd, &buf[0], 5);
 }
 
@@ -316,7 +316,7 @@ void SpeedPIDIntegral_Write(unsigned char gain)
     buf[3] = gain; 
     buf[4] = 0x97 + buf[3]; //checksum = 93 + 03 + 01 + buf[3]
     
-    printf("SpeedPIDIntegral_Write(void) = %d\n", buf[3]);
+    //printf("SpeedPIDIntegral_Write(void) = %d\n", buf[3]);
     write(uart_fd, &buf[0], 5);
 }
 
@@ -347,7 +347,7 @@ void SpeedPIDDifferential_Write(unsigned char gain)
     buf[3] = gain; 
     buf[4] = 0x98 + buf[3]; //checksum = 94 + 03 + 01 + buf[3]
     
-    printf("SpeedPIDDifferential_Write(void) = %d\n", buf[3]);
+    //printf("SpeedPIDDifferential_Write(void) = %d\n", buf[3]);
     write(uart_fd, &buf[0], 5);
 }
 
@@ -379,7 +379,7 @@ void PositionControlOnOff_Write(char status)
     buf[3] = status; //UNCONTROL=0 CONTROL=1
     buf[4] = 0x9a + buf[3]; //checksum = 9a + 03 + 01 + buf[3]
     
-    printf("PositionControlOnOff_Write(void) = %d\n", buf[3]);
+    //printf("PositionControlOnOff_Write(void) = %d\n", buf[3]);
     write(uart_fd, &buf[0], 5);
 }
 
@@ -410,7 +410,7 @@ void PositionProportionPoint_Write(unsigned char gain)
     buf[3] = gain;
     buf[4] = 0x9c + buf[3]; //checksum = 98 + 03 + 01 + buf[3]
     
-    printf("PositionProportionPoint_Write(void) = %d\n", buf[3]);
+    //printf("PositionProportionPoint_Write(void) = %d\n", buf[3]);
     write(uart_fd, &buf[0], 5);
 }
 

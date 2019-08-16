@@ -89,6 +89,8 @@ struct thr_data {
 /* variable declare */
 CvPoint vanishP;
 
+DriveLine driveLine;
+
 int speed, posInit, posDes;
 unsigned char gain;
 bool enablePositionSpeed;
@@ -215,7 +217,7 @@ static void hough_transform(struct display *disp, struct buffer *cambuf)
 
         gettimeofday(&st, NULL);
 
-        vanishP = OpenCV_hough_transform(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, &mode);
+        driveLine = OpenCV_hough_transform(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, &mode);
 
         switch (mode)
         {
@@ -452,16 +454,19 @@ void * ValanceThread(void *arg)
 {
     struct thr_data *data = (struct thr_data *)arg;
     int valanceDegree = 1530;
-    int centerX = 170;
+    int centerX = 160;
+
+    float centerRightTheta = 2.26;
 
     SteeringServoControl_Write(valanceDegree);
 
     while (1)
     {
-        int gap = vanishP.x - centerX;
-        int gapDiff = 10;
+        /*int gap = vanishP.x - centerX;
+        int gapDiff = 20;
         int gapTick = gap / gapDiff;
-        int sleepTick = 500000;
+        int sleepTick = 1000000;
+
         if (dMode == STRAIGHT)
         {
             if (gap <= -gapDiff)
@@ -499,7 +504,39 @@ void * ValanceThread(void *arg)
         else if (dMode == CURVELEFT)
         {
 
+        }*/
+
+        
+        float gap = driveLine.rightLine.theta - centerRightTheta;
+        float gapDiff = 0.05;
+        int gapTick = gap / gapDiff;
+        int sleepTick = 800000;
+        int steerP = 50;
+
+        if (gap <= -gapDiff)
+        {
+            printf("left -> center\n");
+            SteeringServoControl_Write(valanceDegree + gapTick * 80);
+            usleep(sleepTick);
+            SteeringServoControl_Write(valanceDegree - gapTick * 50);
+            usleep(500000);
+            SteeringServoControl_Write(valanceDegree);
+            usleep(sleepTick);
         }
+        else if (gap >= gapDiff)
+        {
+            printf("right -> center\n");
+            SteeringServoControl_Write(valanceDegree + gapTick * 80);
+            usleep(sleepTick);
+            SteeringServoControl_Write(valanceDegree - gapTick * 50);
+            usleep(500000);
+            SteeringServoControl_Write(valanceDegree);
+            usleep(sleepTick);
+        }
+        else
+            SteeringServoControl_Write(valanceDegree);
+
+        printf("left theta : %f, right theta : %f\n", driveLine.leftLine.theta, driveLine.rightLine.theta);
 
         usleep(50000);
     }
@@ -615,13 +652,13 @@ int main(int argc, char **argv)
     }
 
     CameraXServoControl_Write(1500);
-    CameraYServoControl_Write(1650);  
+    CameraYServoControl_Write(1700);  
 
     posInit = 0;
-    posDes = 150;
+    posDes = 200;
     gain = 10;
-    speed = 100;
-    enablePositionSpeed = true;
+    speed = 200;
+    enablePositionSpeed = false;
 
     pexam_data = &tdata;
 

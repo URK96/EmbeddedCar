@@ -25,7 +25,10 @@ typedef enum
     CURVERIGHT
 }DrivingMode;
 
+
+
 extern "C" {
+
 
 /**
   * @brief  To load image file to the buffer.
@@ -177,7 +180,7 @@ void OpenCV_canny_edge_image(char* file, unsigned char* outBuf, int nw, int nh)
              nh : height value of destination buffer
   * @retval none
   */
-CvPoint OpenCV_hough_transform(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, int* mode)
+DriveLine OpenCV_hough_transform(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, int* mode)
 {
     CvPoint ptv = {0,0};
     Scalar lineColor = cv::Scalar(255,255,255);
@@ -203,6 +206,8 @@ CvPoint OpenCV_hough_transform(unsigned char* srcBuf, int iw, int ih, unsigned c
 
     float temp[2][2] = {{0,0}, {0,0}};
 
+    DriveLine dLine;
+
     std::vector<cv::Vec2f>::const_iterator it=lines.begin();
 
     while (it!=lines.end()) 
@@ -210,7 +215,7 @@ CvPoint OpenCV_hough_transform(unsigned char* srcBuf, int iw, int ih, unsigned c
         float rho = (*it)[0];   // 첫 번째 요소는 rho 거리
         float theta = (*it)[1]; // 두 번째 요소는 델타 각도
 
-        if(theta > 1.3 && theta < 1.7)
+        if(theta > 1.4 && theta < 1.6)
         {
             ++it;
             continue;
@@ -236,6 +241,11 @@ CvPoint OpenCV_hough_transform(unsigned char* srcBuf, int iw, int ih, unsigned c
         ++it;
     }
 
+    dLine.leftLine.rho = temp[0][0];
+    dLine.leftLine.theta = temp[0][1];
+    dLine.rightLine.rho = temp[1][0];
+    dLine.rightLine.theta = temp[1][1];
+
     if (temp[0][1] && temp[1][1])
     {
         cv::Point pt1(0, temp[0][0]/sin(temp[0][1]));
@@ -248,9 +258,11 @@ CvPoint OpenCV_hough_transform(unsigned char* srcBuf, int iw, int ih, unsigned c
 
         ptv = CalVanishPoint(pt1, pt2, pt3, pt4);
 
+        dLine.VanishPoint = ptv;
+
         *mode = 0;
     }
-    else if (temp[0][1] && !temp[1][1])
+    /*else if (temp[0][1] && !temp[1][1])
     {
         cv::Point pt1(0, temp[0][0]/sin(temp[0][1]));
 	    cv::Point pt2(result.cols, (temp[0][0]-result.cols*cos(temp[0][1]))/sin(temp[0][1]));
@@ -265,12 +277,13 @@ CvPoint OpenCV_hough_transform(unsigned char* srcBuf, int iw, int ih, unsigned c
 	    cv::line(srcRGB, pt1, pt2, lineColor, 1);
 
         *mode = 2;
-    }
+    }*/
     else
-        return ptv;
+    {
+        dLine.VanishPoint = ptv;
 
-	//if(!temp[0][1] && !temp[1][1])
-		//return ptv;
+        *mode = 0;
+    }
 
 	/* left line */
 	//cv::Point pt1(0, temp[0][0]/sin(temp[0][1]));
@@ -303,7 +316,7 @@ CvPoint OpenCV_hough_transform(unsigned char* srcBuf, int iw, int ih, unsigned c
 
     cv::resize(srcRGB, dstRGB, cv::Size(nw, nh), 0, 0, CV_INTER_LINEAR);
 
-    return ptv;
+    return dLine;
 }
 
 CvPoint CalVanishPoint(CvPoint pt1, CvPoint pt2, CvPoint pt3, CvPoint pt4)
