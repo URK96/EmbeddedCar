@@ -15,6 +15,20 @@
 
 #define PI 3.1415926
 
+#define _ROI_Xmin 0.0f	
+#define _ROI_Xmax 1.0f
+#define _ROI_Ymin 0.5f
+#define _ROI_Ymin_max 0.6f
+#define _ROI_Ymax 0.9f
+
+/* Yellow Lane Detection Threshold */
+#define LY_lowH 20
+#define LY_highH 50	//40	
+#define LY_lowS 30	//20
+#define LY_highS 255
+#define LY_lowV 80
+#define LY_highV 255
+
 using namespace std;
 using namespace cv;
 
@@ -25,6 +39,8 @@ typedef enum
     CURVERIGHT
 }DrivingMode;
 
+volatile int lane_Xmin, lane_Xmax,lane_Ymin, lane_Ymax;
+volatile double current_Y_min = _ROI_Ymin;
 
 
 extern "C" {
@@ -34,8 +50,8 @@ extern "C" {
   * @brief  To load image file to the buffer.
   * @param  file: pointer for load image file in local path
              outBuf: destination buffer pointer to load
-             nw : width value of the destination buffer
-             nh : height value of the destination buffer
+             nw : width v of the destination buffer
+             nh : height v of the destination buffer
   * @retval none
   */
 void OpenCV_load_file(char* file, unsigned char* outBuf, int nw, int nh)
@@ -52,8 +68,8 @@ void OpenCV_load_file(char* file, unsigned char* outBuf, int nw, int nh)
 /**
   * @brief  To convert format from BGR to RGB.
   * @param  inBuf: buffer pointer of BGR image
-             w: width value of the buffers
-             h : height value of the buffers
+             w: width v of the buffers
+             h : height v of the buffers
              outBuf : buffer pointer of RGB image
   * @retval none
   */
@@ -69,8 +85,8 @@ void OpenCV_Bgr2RgbConvert(unsigned char* inBuf, int w, int h, unsigned char* ou
   * @brief  Detect faces on loaded image and draw circles on the faces of the loaded image.
   * @param  file: pointer for load image file in local path
              outBuf: buffer pointer to draw circles on the detected faces
-             nw : width value of the destination buffer
-             nh : height value of the destination buffer
+             nw : width v of the destination buffer
+             nh : height v of the destination buffer
   * @retval none
   */
 void OpenCV_face_detection(char* file, unsigned char* outBuf, int nw, int nh)
@@ -101,8 +117,8 @@ void OpenCV_face_detection(char* file, unsigned char* outBuf, int nw, int nh)
   * @param  file1: file path of first image to bind
              file2: file path of second image to bind
              outBuf : destination buffer pointer to bind
-             nw : width value of the destination buffer
-             nh : height value of the destination buffer
+             nw : width v of the destination buffer
+             nh : height v of the destination buffer
   * @retval none
   */
 void OpenCV_binding_image(char* file1, char* file2, unsigned char* outBuf, int nw, int nh)
@@ -142,8 +158,8 @@ void OpenCV_binding_image(char* file1, char* file2, unsigned char* outBuf, int n
   * @brief  Apply canny edge algorithm and draw it on destination buffer.
   * @param  file: pointer for load image file in local path
              outBuf: destination buffer pointer to apply canny edge
-             nw : width value of destination buffer
-             nh : height value of destination buffer
+             nw : width v of destination buffer
+             nh : height v of destination buffer
   * @retval none
   */
 void OpenCV_canny_edge_image(char* file, unsigned char* outBuf, int nw, int nh)
@@ -173,27 +189,86 @@ void OpenCV_canny_edge_image(char* file, unsigned char* outBuf, int nw, int nh)
 /**
   * @brief  Detect the hough and draw hough on destination buffer.
   * @param  srcBuf: source pointer to hough transform
-             iw: width value of source buffer
-             ih : height value of source buffer
+             iw: width v of source buffer
+             ih : height v of source buffer
              outBuf : destination pointer to hough transform
-             nw : width value of destination buffer
-             nh : height value of destination buffer
+             nw : width v of destination buffer
+             nh : height v of destination buffer
   * @retval none
   */
 DriveLine OpenCV_hough_transform(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, int* mode)
 {
     CvPoint ptv = {0,0};
+
     Scalar lineColor = cv::Scalar(255,255,255);
+    Scalar yellow(131, 232, 252);
+
+    DriveLine dLine;
     
     Mat dstRGB(nh, nw, CV_8UC3, outBuf);
-    
     Mat srcRGB(ih, iw, CV_8UC3, srcBuf);
+    Mat srcHSV;
+    Mat dstHSV;
     Mat resRGB(ih, iw, CV_8UC3);
-    //cvtColor(srcRGB, srcRGB, CV_BGR2BGRA);
+
+    cvtColor(srcRGB, srcHSV, CV_BGR2HSV);
+
+    IplImage *iplImage = new IplImage(srcHSV);
+    IplImage *dstImage = new IplImage(srcHSV); //cvCreateImage(cvSize(ih, iw), IPL_DEPTH_8U, 1);
+
+    int i, j;
+	const unsigned char HUE = 0, SAT = 1, VAL = 2;
+	unsigned int StopSignCnt = 0;
+	lane_Xmin = iplImage->width;
+	lane_Xmax = 0;
+	lane_Ymin = iplImage->height;
+	lane_Xmax = 0;
+
+	int ROI_Xs = (int)(iplImage->width * _ROI_Xmin), ROI_Xd = (int)(iplImage->width * _ROI_Xmax);
+	int ROI_Ys = (int)(iplImage->height * current_Y_min), ROI_Yd = (int)(iplImage->height * _ROI_Ymax);
+	
+	for (i = 0; i < iplImage->height; i++)
+	{
+		for (j = 0; j < iplImage->width; j++) 
+		{
+			if (/* Range to detect (Lane : Yellow or White) */
+				// ROI range condition
+				/*(i > MAX(0, ROI_Ys) && i < MIN(iplImage->height, ROI_Yd) &&
+				j > MAX(0, ROI_Xs) && j < MIN(iplImage->width, ROI_Xd))
+				&&*/
+				// Color condition to detect
+				(
+					// Yellow Lane
+					((unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + HUE] >= LY_lowH &&
+					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + HUE] <= LY_highH &&
+					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + SAT] >= LY_lowS &&
+					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + SAT] <= LY_highS &&
+					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + VAL] >= LY_lowV &&
+					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + VAL] <= LY_highV)
+			   ))
+			{
+				dstImage->imageData[i*dstImage->widthStep + 3 * j + HUE] = (unsigned char)255;
+                dstImage->imageData[i*dstImage->widthStep + 3 * j + SAT] = (unsigned char)255;
+                dstImage->imageData[i*dstImage->widthStep + 3 * j + VAL] = (unsigned char)255;
+				if (j < lane_Xmin) lane_Xmin = j;
+				if (j > lane_Xmax) lane_Xmax = j;
+				if (j < lane_Ymin) lane_Ymin = j;
+				if (j > lane_Ymax) lane_Ymax = j;
+			}
+			else // elsewhere
+			{
+				dstImage->imageData[i*dstImage->widthStep + 3 * j + HUE] = (unsigned char)0;
+                dstImage->imageData[i*dstImage->widthStep + 3 * j + SAT] = (unsigned char)0;
+                dstImage->imageData[i*dstImage->widthStep + 3 * j + VAL] = (unsigned char)0;
+			}
+		}
+	}
+
+    dstHSV = cvarrToMat(dstImage);
 
     // 캐니 알고리즘 적용
     cv::Mat contours;
-    cv::Canny(srcRGB, contours, 125, 350);
+    cv::Canny(dstHSV, contours, 125, 350);
     
     // 선 감지 위한 허프 변환
     std::vector<cv::Vec2f> lines;
@@ -205,8 +280,6 @@ DriveLine OpenCV_hough_transform(unsigned char* srcBuf, int iw, int ih, unsigned
     //printf("Lines detected: %d\n", lines.size());
 
     float temp[2][2] = {{0,0}, {0,0}};
-
-    DriveLine dLine;
 
     std::vector<cv::Vec2f>::const_iterator it=lines.begin();
 
@@ -250,11 +323,11 @@ DriveLine OpenCV_hough_transform(unsigned char* srcBuf, int iw, int ih, unsigned
     {
         cv::Point pt1(0, temp[0][0]/sin(temp[0][1]));
 	    cv::Point pt2(result.cols, (temp[0][0]-result.cols*cos(temp[0][1]))/sin(temp[0][1]));
-	    cv::line(srcRGB, pt1, pt2, lineColor, 1);
+	    cv::line(dstHSV, pt1, pt2, lineColor, 1);
 
         cv::Point pt3(0, temp[1][0]/sin(temp[1][1]));
         cv::Point pt4(result.cols, (temp[1][0]-result.cols*cos(temp[1][1]))/sin(temp[1][1]));
-        cv::line(srcRGB, pt3, pt4, lineColor, 1);
+        cv::line(dstHSV, pt3, pt4, lineColor, 1);
 
         ptv = CalVanishPoint(pt1, pt2, pt3, pt4);
 
@@ -311,10 +384,10 @@ DriveLine OpenCV_hough_transform(unsigned char* srcBuf, int iw, int ih, unsigned
 
     
 
-    printf("vanish point : %d %d\n", ptv.x, ptv.y);
-    cv::circle(srcRGB, ptv, 7, (255,255,255), 3);
+    //printf("vanish point : %d %d\n", ptv.x, ptv.y);
+    //cv::circle(srcRGB, ptv, 7, (255,255,255), 3);
 
-    cv::resize(srcRGB, dstRGB, cv::Size(nw, nh), 0, 0, CV_INTER_LINEAR);
+    cv::resize(dstHSV, dstRGB, cv::Size(nw, nh), 0, 0, CV_INTER_LINEAR);
 
     return dLine;
 }
@@ -334,16 +407,16 @@ CvPoint CalVanishPoint(CvPoint pt1, CvPoint pt2, CvPoint pt3, CvPoint pt4)
   * @brief  Merge two source images of the same size into the output buffer.
   * @param  src1: pointer to parameter of rgb32 image buffer
              src2: pointer to parameter of bgr32 image buffer
-             dst : pointer to parameter of rgb32 output buffer
-             w : width of src and dst buffer
-             h : height of src and dst buffer
+             dstImage : pointer to parameter of rgb32 output buffer
+             w : width of src and dstImage buffer
+             h : height of src and dstImage buffer
   * @retval none
   */
-void OpenCV_merge_image(unsigned char* src1, unsigned char* src2, unsigned char* dst, int w, int h)
+void OpenCV_merge_image(unsigned char* src1, unsigned char* src2, unsigned char* dstImage, int w, int h)
 {
     Mat src1AR32(h, w, CV_8UC4, src1);
     Mat src2AR32(h, w, CV_8UC4, src2);
-    Mat dstAR32(h, w, CV_8UC4, dst);
+    Mat dstAR32(h, w, CV_8UC4, dstImage);
 
     cvtColor(src2AR32, src2AR32, CV_BGRA2RGBA);
 
@@ -358,7 +431,7 @@ void OpenCV_merge_image(unsigned char* src1, unsigned char* src2, unsigned char*
         }
     }
 
-    memcpy(dst, src1AR32.data, w*h*4);
+    memcpy(dstImage, src1AR32.data, w*h*4);
 }
 
 }

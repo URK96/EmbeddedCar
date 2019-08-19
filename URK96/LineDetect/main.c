@@ -538,7 +538,7 @@ void * ValanceThread(void *arg)
 
         printf("left theta : %f, right theta : %f\n", driveLine.leftLine.theta, driveLine.rightLine.theta);
 
-        usleep(50000);
+        usleep(10000);
     }
 
 
@@ -652,7 +652,7 @@ int main(int argc, char **argv)
     }
 
     CameraXServoControl_Write(1500);
-    CameraYServoControl_Write(1700);  
+    CameraYServoControl_Write(1750);  
 
     posInit = 0;
     posDes = 200;
