@@ -200,7 +200,7 @@ DriveLine OpenCV_hough_transform(unsigned char* srcBuf, int iw, int ih, unsigned
 {
     CvPoint ptv = {0,0};
 
-    Scalar lineColor = cv::Scalar(255,255,255);
+    Scalar lineColor = cv::Scalar(255, 0, 0);
     Scalar yellow(131, 232, 252);
 
     DriveLine dLine;
@@ -288,7 +288,7 @@ DriveLine OpenCV_hough_transform(unsigned char* srcBuf, int iw, int ih, unsigned
         float rho = (*it)[0];   // 첫 번째 요소는 rho 거리
         float theta = (*it)[1]; // 두 번째 요소는 델타 각도
 
-        if(theta > 1.4 && theta < 1.6)
+        if(theta < 1.01 || theta > 3.12 )
         {
             ++it;
             continue;
@@ -335,7 +335,7 @@ DriveLine OpenCV_hough_transform(unsigned char* srcBuf, int iw, int ih, unsigned
 
         *mode = 0;
     }
-    /*else if (temp[0][1] && !temp[1][1])
+    else if (temp[0][1] && !temp[1][1])
     {
         cv::Point pt1(0, temp[0][0]/sin(temp[0][1]));
 	    cv::Point pt2(result.cols, (temp[0][0]-result.cols*cos(temp[0][1]))/sin(temp[0][1]));
@@ -350,12 +350,12 @@ DriveLine OpenCV_hough_transform(unsigned char* srcBuf, int iw, int ih, unsigned
 	    cv::line(srcRGB, pt1, pt2, lineColor, 1);
 
         *mode = 2;
-    }*/
+    }
     else
     {
         dLine.VanishPoint = ptv;
 
-        *mode = 0;
+        *mode = 3;
     }
 
 	/* left line */
