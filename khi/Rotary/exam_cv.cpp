@@ -11,19 +11,54 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/objdetect/objdetect.hpp>
 
+#include "exam_cv.h"
+
 #define PI 3.1415926
+
+#define _ROI_Xmin 0.0f	
+#define _ROI_Xmax 1.0f
+#define _ROI_Ymin 0.5f
+#define _ROI_Ymin_max 0.6f
+#define _ROI_Ymax 0.9f
+
+/* Yellow Lane Detection Threshold */
+#define LY_lowH 20
+#define LY_highH 50	//40	
+#define LY_lowS 30	//20
+#define LY_highS 255
+#define LY_lowV 80
+#define LY_highV 255
 
 using namespace std;
 using namespace cv;
 
+typedef enum
+{
+    STRAIGHT,
+    CURVELEFT,
+    CURVERIGHT
+}DrivingMode;
+
+volatile int lane_Xmin, lane_Xmax,lane_Ymin, lane_Ymax;
+volatile double current_Y_min = _ROI_Ymin;
+
+IplImage* g_image = NULL;//p
+IplImage* g_gray = NULL;//p
+IplImage* g_binary = NULL;//p
+
+int g_thresh = 100 ;//p
+CvMemStorage* g_storage = NULL ;//p 
+
+
 extern "C" {
+
 
 /**
   * @brief  To load image file to the buffer.
   * @param  file: pointer for load image file in local path
              outBuf: destination buffer pointer to load
-             nw : width value of the destination buffer
-             nh : height value of the destination buffer
+             nw : width v of the destination buffer
+             nh : height v of the destination buffer
   * @retval none
   */
 void OpenCV_load_file(char* file, unsigned char* outBuf, int nw, int nh)
@@ -40,8 +75,8 @@ void OpenCV_load_file(char* file, unsigned char* outBuf, int nw, int nh)
 /**
   * @brief  To convert format from BGR to RGB.
   * @param  inBuf: buffer pointer of BGR image
-             w: width value of the buffers
-             h : height value of the buffers
+             w: width v of the buffers
+             h : height v of the buffers
              outBuf : buffer pointer of RGB image
   * @retval none
   */
@@ -57,8 +92,8 @@ void OpenCV_Bgr2RgbConvert(unsigned char* inBuf, int w, int h, unsigned char* ou
   * @brief  Detect faces on loaded image and draw circles on the faces of the loaded image.
   * @param  file: pointer for load image file in local path
              outBuf: buffer pointer to draw circles on the detected faces
-             nw : width value of the destination buffer
-             nh : height value of the destination buffer
+             nw : width v of the destination buffer
+             nh : height v of the destination buffer
   * @retval none
   */
 void OpenCV_face_detection(char* file, unsigned char* outBuf, int nw, int nh)
@@ -89,8 +124,8 @@ void OpenCV_face_detection(char* file, unsigned char* outBuf, int nw, int nh)
   * @param  file1: file path of first image to bind
              file2: file path of second image to bind
              outBuf : destination buffer pointer to bind
-             nw : width value of the destination buffer
-             nh : height value of the destination buffer
+             nw : width v of the destination buffer
+             nh : height v of the destination buffer
   * @retval none
   */
 void OpenCV_binding_image(char* file1, char* file2, unsigned char* outBuf, int nw, int nh)
@@ -130,8 +165,8 @@ void OpenCV_binding_image(char* file1, char* file2, unsigned char* outBuf, int n
   * @brief  Apply canny edge algorithm and draw it on destination buffer.
   * @param  file: pointer for load image file in local path
              outBuf: destination buffer pointer to apply canny edge
-             nw : width value of destination buffer
-             nh : height value of destination buffer
+             nw : width v of destination buffer
+             nh : height v of destination buffer
   * @retval none
   */
 void OpenCV_canny_edge_image(char* file, unsigned char* outBuf, int nw, int nh)
@@ -158,82 +193,97 @@ void OpenCV_canny_edge_image(char* file, unsigned char* outBuf, int nw, int nh)
     cv::resize(contours, dstRGB, cv::Size(nw, nh), 0, 0, CV_INTER_LINEAR);
 }
 
+
 /**
   * @brief  Detect the hough and draw hough on destination buffer.
   * @param  srcBuf: source pointer to hough transform
-             iw: width value of source buffer
-             ih : height value of source buffer
+             iw: width v of source buffer
+             ih : height v of source buffer
              outBuf : destination pointer to hough transform
-             nw : width value of destination buffer
-             nh : height value of destination buffer
+             nw : width v of destination buffer
+             nh : height v of destination buffer
   * @retval none
   */
-void OpenCV_hough_transform(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh)
+DriveLine OpenCV_hough_transform(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, int* mode)
 {
-    Scalar lineColor = cv::Scalar(255,255,255);
+    CvPoint ptv = {0,0};
+
+    Scalar lineColor = cv::Scalar(255, 0, 0);
+    Scalar yellow(131, 232, 252);
+
+    DriveLine dLine;
     
     Mat dstRGB(nh, nw, CV_8UC3, outBuf);
-    
     Mat srcRGB(ih, iw, CV_8UC3, srcBuf);
-    Mat resRGB(ih, iw, CV_8UC3);
-    //cvtColor(srcRGB, srcRGB, CV_BGR2BGRA);
+    Mat compImage(ih, iw, CV_8UC3, srcBuf);
 
-    // 캐니 알고리즘 적용
-    cv::Mat contours;
-    cv::Canny(srcRGB, contours, 125, 350);
+    CvSeq* contours=0;
     
-    // 선 감지 위한 허프 변환
-    std::vector<cv::Vec2f> lines;
-    cv::HoughLines(contours, lines, 1, PI/180, // 단계별 크기 (1과 π/180에서 단계별로 가능한 모든 각도로 반지름의 선을 찾음)
-        80);  // 투표(vote) 최대 개수
-    
-    // 선 그리기
-    cv::Mat result(contours.rows, contours.cols, CV_8UC3, lineColor);
-    //printf("Lines detected: %d\n", lines.size());
+    cvtColor(srcRGB, srcRGB, CV_BGR2GRAY);
 
-    // 선 벡터를 반복해 선 그리기
-    std::vector<cv::Vec2f>::const_iterator it= lines.begin();
-    while (it!=lines.end()) 
+    IplImage *iplImage = new IplImage(srcRGB);
+
+    //임계값 이하:0, 임계값초과값:1 설정
+    cvThreshold(iplImage, iplImage, g_thresh, 255, CV_THRESH_BINARY);
+
+    //윤곽선 찾기
+    cvFindContours
+    (
+            iplImage,                //입력영상
+            g_storage,             //검출된 외곽선을 기록하기 위한 메모리 스토리지
+            &contours,             //외곽선의 좌표들이 저장된 Sequence
+            sizeof(CvContour),    
+            CV_RETR_TREE           //어떤종류의 외곽선 찾을지, 어떻게 보여줄지에 대한정보
+    );     
+
+    cvZero(iplImage);
+
+    if(contours) 
     {
-        float rho = (*it)[0];   // 첫 번째 요소는 rho 거리
-        float theta = (*it)[1]; // 두 번째 요소는 델타 각도
-        
-        if (theta < PI/4. || theta > 3.*PI/4.) // 수직 행
-        {
-            cv::Point pt1(rho/cos(theta), 0); // 첫 행에서 해당 선의 교차점   
-            cv::Point pt2((rho-result.rows*sin(theta))/cos(theta), result.rows);
-            // 마지막 행에서 해당 선의 교차점
-            cv::line(srcRGB, pt1, pt2, lineColor, 1); // 하얀 선으로 그리기
-
-        } 
-        else // 수평 행
-        { 
-            cv::Point pt1(0,rho/sin(theta)); // 첫 번째 열에서 해당 선의 교차점  
-            cv::Point pt2(result.cols,(rho-result.cols*cos(theta))/sin(theta));
-            // 마지막 열에서 해당 선의 교차점
-            cv::line(srcRGB, pt1, pt2, lineColor, 1); // 하얀 선으로 그리기
-        }
-        //printf("line: rho=%f, theta=%f\n", rho, theta);
-        ++it;
+            //외곽선을 찾은 정보(contour)를 이용하여 외곽선을 그림
+            cvDrawContours
+            (
+                    iplImage,                //외곽선이 그려질 영상
+                    contours,              //외곽선 트리의 루트노드
+                    cvScalarAll(255),      //외부 외곽선의 색상
+                    cvScalarAll(128),      //내부 외곽선의 색상
+                    100                    //외곽선을 그릴때 이동할 깊이
+            );                           
+    
     }
 
-    cv::resize(srcRGB, dstRGB, cv::Size(nw, nh), 0, 0, CV_INTER_LINEAR);
+    compImage = cvarrToMat(iplImage);
+    
+    cv::resize(compImage, dstRGB, cv::Size(nw, nh), 0, 0, CV_INTER_LINEAR);
+
+    return dLine;
 }
+
+CvPoint CalVanishPoint(CvPoint pt1, CvPoint pt2, CvPoint pt3, CvPoint pt4)
+{
+	CvPoint ptv = {0,0};	
+	
+	ptv.x = 320 * (pt3.y-pt1.y) / (pt2.y-pt1.y+pt3.y-pt4.y);
+	ptv.y = (pt2.y-pt1.y) * ptv.x / 320 + pt1.y;
+
+	return ptv;
+}
+
 
 /**
   * @brief  Merge two source images of the same size into the output buffer.
   * @param  src1: pointer to parameter of rgb32 image buffer
              src2: pointer to parameter of bgr32 image buffer
-             dst : pointer to parameter of rgb32 output buffer
-             w : width of src and dst buffer
-             h : height of src and dst buffer
+             dstImage : pointer to parameter of rgb32 output buffer
+             w : width of src and dstImage buffer
+             h : height of src and dstImage buffer
   * @retval none
   */
-void OpenCV_merge_image(unsigned char* src1, unsigned char* src2, unsigned char* dst, int w, int h)
+void OpenCV_merge_image(unsigned char* src1, unsigned char* src2, unsigned char* dstImage, int w, int h)
 {
     Mat src1AR32(h, w, CV_8UC4, src1);
     Mat src2AR32(h, w, CV_8UC4, src2);
-    Mat dstAR32(h, w, CV_8UC4, dst);
+    Mat dstAR32(h, w, CV_8UC4, dstImage);
 
     cvtColor(src2AR32, src2AR32, CV_BGRA2RGBA);
 
@@ -248,7 +298,7 @@ void OpenCV_merge_image(unsigned char* src1, unsigned char* src2, unsigned char*
         }
     }
 
-    memcpy(dst, src1AR32.data, w*h*4);
+    memcpy(dstImage, src1AR32.data, w*h*4);
 }
 
 }
