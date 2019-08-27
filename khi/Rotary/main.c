@@ -9,7 +9,7 @@
 
 #include <opencv/highgui.h>
 #include <opencv/cv.h>
-//#include <highgui>//p
+
 
 #include "util.h"
 #include "display-kms.h"
@@ -221,7 +221,7 @@ static void hough_transform(struct display *disp, struct buffer *cambuf)
 
         gettimeofday(&st, NULL);
         
-        driveLine = OpenCV_hough_transform(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, &mode);
+        Rotary(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, &mode);
 
         switch (mode)
         {
@@ -447,7 +447,7 @@ void * input_thread(void *arg)
     return NULL;
 }
 
-void * MoveThread(void *arg)//흰색 일시정지 라인 체크
+void * MoveThread(void *arg)//흰색 일시정지 라인 체크&카메라 전방주시
 {
     struct thr_data *data = (struct thr_data *)arg;
     char sensor;
@@ -463,6 +463,24 @@ void * MoveThread(void *arg)//흰색 일시정지 라인 체크
 
         usleep(100);
     }
+    //사각형(돌아다니는 차) 크기 체크
+    /*int a = 0; 
+    int b = 0;
+
+    a = RLine;
+    usleep(50000);
+    b = RLIne;
+    
+    if (a > b)
+    {
+        printf("사각형이 줄어듬 = 차가 멀어짐 %d\n", a);
+    }
+    else
+    {
+        printf("사각형이 커짐 = 차가 가까워짐 %d\n", b);
+    }*/
+    
+
 
     return NULL;
 }

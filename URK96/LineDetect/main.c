@@ -654,6 +654,7 @@ int main(int argc, char **argv)
     int ret = 0;
 
 	CarControlInit();
+    cv :: initModule_nonfree();
 
     printf("-- 6_camera_opencv_disp example Start --\n");
 

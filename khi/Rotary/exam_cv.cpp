@@ -10,6 +10,9 @@
 //#include <opencv2/gpu/device/utility.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/objdetect/objdetect.hpp>
+#include <opencv2/legacy/compat.hpp>
+#include <opencv2/nonfree/nonfree.hpp>
+
 
 #include "exam_cv.h"
 
@@ -45,7 +48,6 @@ volatile double current_Y_min = _ROI_Ymin;
 IplImage* g_image = NULL;//p
 IplImage* g_gray = NULL;//p
 IplImage* g_binary = NULL;//p
-
 int g_thresh = 100 ;//p
 CvMemStorage* g_storage = NULL ;//p 
 
@@ -204,69 +206,81 @@ void OpenCV_canny_edge_image(char* file, unsigned char* outBuf, int nw, int nh)
              nh : height v of destination buffer
   * @retval none
   */
-DriveLine OpenCV_hough_transform(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, int* mode)
+
+const int DIM_VECTOR = 128;
+
+
+int Rotary(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, int* mode)
 {
-    CvPoint ptv = {0,0};
+    CvPoint max;
+    CvPoint min;
+   
 
-    Scalar lineColor = cv::Scalar(255, 0, 0);
-    Scalar yellow(131, 232, 252);
-
-    DriveLine dLine;
-    
-    Mat dstRGB(nh, nw, CV_8UC3, outBuf);
     Mat srcRGB(ih, iw, CV_8UC3, srcBuf);
-    Mat compImage(ih, iw, CV_8UC3, srcBuf);
-
-    CvSeq* contours=0;
+    Mat dstRGB(nh, nw, CV_8UC3, outBuf);   
     
-    cvtColor(srcRGB, srcRGB, CV_BGR2GRAY);
+    // SURF추출을 위한 입력 영상을 그레이스케일로 읽음
+    IplImage* grayImage = new IplImage(srcRGB);
 
-    IplImage *iplImage = new IplImage(srcRGB);
+    // 결과에 키포인트를 표현하기 위해 컬러로도 읽음 
 
-    //임계값 이하:0, 임계값초과값:1 설정
-    cvThreshold(iplImage, iplImage, g_thresh, 255, CV_THRESH_BINARY);
+    CvMemStorage* storage = cvCreateMemStorage(0);
+    CvSeq* imageKeypoints = 0;
+    CvSeq* imageDescriptors = 0;
+    CvSURFParams params = cvSURFParams(500, 1);
 
-    //윤곽선 찾기
-    cvFindContours
-    (
-            iplImage,                //입력영상
-            g_storage,             //검출된 외곽선을 기록하기 위한 메모리 스토리지
-            &contours,             //외곽선의 좌표들이 저장된 Sequence
-            sizeof(CvContour),    
-            CV_RETR_TREE           //어떤종류의 외곽선 찾을지, 어떻게 보여줄지에 대한정보
-    );     
-
-    cvZero(iplImage);
-
-    if(contours) 
+    // 영상으로부터 SURF 특징 추출
+    cvExtractSURF(grayImage, 0, &imageKeypoints, &imageDescriptors, storage, params);
+    cout << "Image Descriptors: " << imageDescriptors->total << endl;
+        
+    // 영상에 키포인트 표현,지름 불필요
+    for (int i = 0; i < imageKeypoints->total; i++) 
     {
-            //외곽선을 찾은 정보(contour)를 이용하여 외곽선을 그림
-            cvDrawContours
-            (
-                    iplImage,                //외곽선이 그려질 영상
-                    contours,              //외곽선 트리의 루트노드
-                    cvScalarAll(255),      //외부 외곽선의 색상
-                    cvScalarAll(128),      //내부 외곽선의 색상
-                    100                    //외곽선을 그릴때 이동할 깊이
-            );                           
+        //int radius;
+        CvPoint center;
+        CvSURFPoint* point = (CvSURFPoint*)cvGetSeqElem(imageKeypoints, i);
     
+        center.x = cvRound(point->pt.x);
+        center.y = cvRound(point->pt.y);
+    
+        //radius = cvRound(point->size * 1.2 / 9.0 * 2.0);
+        //cv::line(dstHSV, pt1(temp[0][0], temp[0][1]),pt2, lineColor, 1); 
+        //cv::circle(srcRGB, center, radius, cvScalar(0,255,255), 1, 8, 0);
+        if (i == 0)
+        {
+            max.x = min.x = center.x;
+            max.y = min.y = center.y;
+        }
+
+        if((max.x < center.x) && (max.y < center.y))
+        {
+            max.x = center.x;
+            max.y = center.y;
+        }
+        else if((min.x > center.x) && (min.y > center.y))
+        {
+            min.x = center.x;
+            min.y = center.y;
+        } 
     }
+    cv::rectangle(srcRGB, min, max, cvScalar(0,255,255), 1, 8, 0);
 
-    compImage = cvarrToMat(iplImage);
+    int width = max.x - min.x;
+    int height = max.y - min.y;
+    float area = width*height ; 
     
-    cv::resize(compImage, dstRGB, cv::Size(nw, nh), 0, 0, CV_INTER_LINEAR);
+    printf("min x,y : %d, %d \n", min.x ,min.y);
+    printf("max x,y : %d ,%d \n", max.x ,max.y);
+    printf("area : %f \n", area);
+    
+    // 후처리 - 메모리 해제 등
+    cvClearSeq(imageKeypoints);
+    cvClearSeq(imageDescriptors);
+    cvReleaseMemStorage(&storage);
 
-    return dLine;
-}
-
-CvPoint CalVanishPoint(CvPoint pt1, CvPoint pt2, CvPoint pt3, CvPoint pt4)
-{
-	CvPoint ptv = {0,0};	
-	
-	ptv.x = 320 * (pt3.y-pt1.y) / (pt2.y-pt1.y+pt3.y-pt4.y);
-	ptv.y = (pt2.y-pt1.y) * ptv.x / 320 + pt1.y;
-
-	return ptv;
+    cv::resize(srcRGB, dstRGB, cv::Size(nw,nh), 0, 0, CV_INTER_LINEAR);
+    
+    return area;
 }
 
 
