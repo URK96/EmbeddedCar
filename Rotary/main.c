@@ -208,6 +208,10 @@ static void draw_operatingtime(struct display *disp, uint32_t time)
                  cambuf: vpe output buffer that converted capture image
   * @retval none
   */
+
+ //위로 올려야 함 !!!! 
+ float buff;
+
 static void hough_transform(struct display *disp, struct buffer *cambuf)
 {
     unsigned char srcbuf[VPE_OUTPUT_W*VPE_OUTPUT_H*3];
@@ -216,13 +220,16 @@ static void hough_transform(struct display *disp, struct buffer *cambuf)
     int mode;
 
     unsigned char* cam_pbuf[4];
-    if(get_framebuf(cambuf, cam_pbuf) == 0) {
+    if(get_framebuf(cambuf, cam_pbuf) == 0) 
+    {
         memcpy(srcbuf, cam_pbuf[0], VPE_OUTPUT_W*VPE_OUTPUT_H*3);
 
         gettimeofday(&st, NULL);
         
-        Rotary(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, &mode);
-
+        buff = Rotary(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, &mode);//문제 있음 area를 못받아옴,음수 나옴  
+        
+        printf("buff in hough_transform= %f \n",buff);
+        
         switch (mode)
         {
             case 0:
@@ -242,6 +249,7 @@ static void hough_transform(struct display *disp, struct buffer *cambuf)
         optime = ((et.tv_sec - st.tv_sec)*1000)+ ((int)et.tv_usec/1000 - (int)st.tv_usec/1000);
         draw_operatingtime(disp, optime);
     }
+    //return buff ; 
 }
 
 /**
@@ -449,38 +457,82 @@ void * input_thread(void *arg)
 
 void * MoveThread(void *arg)//흰색 일시정지 라인 체크&카메라 전방주시
 {
+    
+    
     struct thr_data *data = (struct thr_data *)arg;
+    int valanceDegree = 1530;
+    int centerX = 160;
+
+    float centerRightTheta = 2.20; 
+    
     char sensor;
     char byte = 0x80;
     int i;
+
+    float gap = driveLine.rightLine.theta - centerRightTheta;
+    float gapDiff = 0.05;
+    int gapTick = gap / gapDiff;
+    
+    int sleepTickgo = 500000;
+    int sleepTickturn = 500000;
+    
+
+    int steerP = 50;
+    float a,b ; 
 
     while (1)
     {
         sensor = LineSensor_Read();        // black:1, white:0,바닥에 있는 라인트레이서
 
-        if (sensor == 0)
-            enablePositionSpeed = false;
+         if(sensor == 0 )//일시정지선 만나면 
+            enablePositionSpeed = false;//정지 
+        
+        //사각형(돌아다니는 차) 크기 체크
+        
+        
+        printf("buff in MT  = %f \n",buff);
+
+        a = buff;
+        usleep(50000);
+        b = buff;
+        
+        printf("first size = %f \n",a);
+        printf("next size = %f \n",b);
+
+        if (a > b)//일정 크기 이하로 줄어들면 차 출발,잠깐 직진했다가 원 모양 회전 
+        {
+            printf("사각형이 줄어듬 = 차가 멀어짐 \n");
+            
+            enablePositionSpeed = true;//출발 준비 
+            //직진
+            printf("go straight \n"); 
+            SteeringServoControl_Write(valanceDegree);
+            usleep(sleepTickgo);
+            
+            
+            //원모양 특정시간동안 좌회전 
+            printf("turn a circle \n");
+            SteeringServoControl_Write(valanceDegree + 450);
+            usleep(sleepTickturn);
+
+            //다시 직진,터널 진입 준비(line detect 써야할듯)  
+            printf("go straight \n"); 
+            SteeringServoControl_Write(valanceDegree);
+            usleep(sleepTickgo);
+            
+            //break;
+        }
+
+        if( a<b )//일정 크기 이상이면 차 정지 
+        {
+            printf("사각형이 커짐 = 차가 가까워짐 %d\n", &b);
+            if (sensor == 0)
+                enablePositionSpeed = false; //일시정지선 만나면 정지
 
         usleep(100);
-    }
-    //사각형(돌아다니는 차) 크기 체크
-    /*int a = 0; 
-    int b = 0;
-
-    a = RLine;
-    usleep(50000);
-    b = RLIne;
+        }
     
-    if (a > b)
-    {
-        printf("사각형이 줄어듬 = 차가 멀어짐 %d\n", a);
     }
-    else
-    {
-        printf("사각형이 커짐 = 차가 가까워짐 %d\n", b);
-    }*/
-    
-
 
     return NULL;
 }
@@ -493,55 +545,11 @@ void * ValanceThread(void *arg)
 
     float centerRightTheta = 2.20;
 
-    SteeringServoControl_Write(valanceDegree);
+    //SteeringServoControl_Write(valanceDegree);
 
     while (1)//소실점기준직진,옛날것
     {
-        /*int gap = vanishP.x - centerX;
-        int gapDiff = 20;
-        int gapTick = gap / gapDiff;
-        int sleepTick = 1000000;
-
-        if (dMode == STRAIGHT)
-        {
-            if (gap <= -gapDiff)
-            {
-                SteeringServoControl_Write(valanceDegree + gapTick * 40);
-                usleep(sleepTick);
-                SteeringServoControl_Write(valanceDegree - gapTick * 40);
-                usleep(sleepTick);
-                SteeringServoControl_Write(valanceDegree);
-            }
-            else if (gap >= gapDiff)
-            {
-                SteeringServoControl_Write(valanceDegree - gapTick * 40);
-                usleep(sleepTick);
-                SteeringServoControl_Write(valanceDegree + gapTick * 40);
-                usleep(sleepTick);
-                SteeringServoControl_Write(valanceDegree);
-            }
-            else
-                SteeringServoControl_Write(valanceDegree);
-        }
-        else if (dMode == CURVERIGHT)
-        {
-            int steerDegree = valanceDegree;
-            int cameraXDegree = 1500;
-
-            while (steerDegree <= 1900)
-            {
-                steerDegree += 50;
-                cameraXDegree += 20;
-                SteeringServoControl_Write(steerDegree);
-                CameraXServoControl_Write(cameraXDegree);
-            }
-        }
-        else if (dMode == CURVELEFT)
-        {
-
-        }*/
-
-        
+       
         float gap = driveLine.rightLine.theta - centerRightTheta;
         float gapDiff = 0.05;
         int gapTick = gap / gapDiff;

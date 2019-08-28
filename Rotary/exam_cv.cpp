@@ -44,6 +44,7 @@ typedef enum
 
 volatile int lane_Xmin, lane_Xmax,lane_Ymin, lane_Ymax;
 volatile double current_Y_min = _ROI_Ymin;
+int fcount = 0;
 
 IplImage* g_image = NULL;//p
 IplImage* g_gray = NULL;//p
@@ -210,78 +211,94 @@ void OpenCV_canny_edge_image(char* file, unsigned char* outBuf, int nw, int nh)
 const int DIM_VECTOR = 128;
 
 
-int Rotary(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, int* mode)
+float Rotary(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, int* mode)
 {
-    CvPoint max;
-    CvPoint min;
-   
+    CvPoint2D32f max;
+    CvPoint2D32f min;
+    float area;
 
     Mat srcRGB(ih, iw, CV_8UC3, srcBuf);
     Mat dstRGB(nh, nw, CV_8UC3, outBuf);   
-    
-    // SURF추출을 위한 입력 영상을 그레이스케일로 읽음
-    IplImage* grayImage = new IplImage(srcRGB);
 
-    // 결과에 키포인트를 표현하기 위해 컬러로도 읽음 
-
-    CvMemStorage* storage = cvCreateMemStorage(0);
-    CvSeq* imageKeypoints = 0;
-    CvSeq* imageDescriptors = 0;
-    CvSURFParams params = cvSURFParams(500, 1);
-
-    // 영상으로부터 SURF 특징 추출
-    cvExtractSURF(grayImage, 0, &imageKeypoints, &imageDescriptors, storage, params);
-    cout << "Image Descriptors: " << imageDescriptors->total << endl;
-        
-    // 영상에 키포인트 표현,지름 불필요
-    for (int i = 0; i < imageKeypoints->total; i++) 
+    if (fcount == 0)
     {
-        //int radius;
-        CvPoint center;
-        CvSURFPoint* point = (CvSURFPoint*)cvGetSeqElem(imageKeypoints, i);
     
-        center.x = cvRound(point->pt.x);
-        center.y = cvRound(point->pt.y);
-    
-        //radius = cvRound(point->size * 1.2 / 9.0 * 2.0);
-        //cv::line(dstHSV, pt1(temp[0][0], temp[0][1]),pt2, lineColor, 1); 
-        //cv::circle(srcRGB, center, radius, cvScalar(0,255,255), 1, 8, 0);
-        if (i == 0)
-        {
-            max.x = min.x = center.x;
-            max.y = min.y = center.y;
-        }
+        // SURF추출을 위한 입력 영상을 그레이스케일로 읽음
+        IplImage* grayImage = new IplImage(srcRGB);
 
-        if((max.x < center.x) && (max.y < center.y))
+        // 결과에 키포인트를 표현하기 위해 컬러로도 읽음 
+
+        CvMemStorage* storage = cvCreateMemStorage(0);
+        CvSeq* imageKeypoints = 0;
+        CvSeq* imageDescriptors = 0;
+        CvSURFParams params = cvSURFParams(1000, 1);
+
+        // 영상으로부터 SURF 특징 추출
+        cvExtractSURF(grayImage, 0, &imageKeypoints, &imageDescriptors, storage, params);
+        cout << "Image Descriptors: " << imageDescriptors->total << endl;
+
+        float temp2;
+        CvPoint temp1 ; 
+
+        // 영상에 키포인트 표현,지름 불필요
+        for (int i = 0; i < imageKeypoints->total; i++) 
         {
-            max.x = center.x;
-            max.y = center.y;
+            int radius;
+            CvPoint2D32f center;    
+
+            CvSURFPoint* point = (CvSURFPoint*)cvGetSeqElem(imageKeypoints, i);
+
+            center.x = cvRound(point->pt.x);
+            center.y = cvRound(point->pt.y);
+
+            radius = cvRound(point->size * 1.2 / 9.0 * 2.0);
+            //cv::line(dstHSV, pt1(temp[0][0], temp[0][1]),pt2, lineColor, 1); 
+            //temp1 = center; 
+            //temp2 = radius ; 
+            if (i == 0)
+            {
+                max.x = min.x = center.x;
+                max.y = min.y = center.y;
+            }
+
+            if((max.x < center.x) && (max.y < center.y))
+            {
+                max.x = center.x;
+                max.y = center.y;
+            }
+            else if((min.x > center.x) && (min.y > center.y))
+            {
+                min.x = center.x;
+                min.y = center.y;
+            } 
+
+            //cv::circle(srcRGB, temp1, temp2, cvScalar(0,255,255), 1, 8, 0);
         }
-        else if((min.x > center.x) && (min.y > center.y))
-        {
-            min.x = center.x;
-            min.y = center.y;
-        } 
+        cv::rectangle(srcRGB, min, max, cvScalar(0,255,255), 1, 8, 0);
+
+        float width = max.x - min.x;
+        float height = max.y - min.y;
+        area = width*height ; 
+
+        printf("min x,y : %f, %f \n", min.x ,min.y);
+        printf("max x,y : %f ,%f \n", max.x ,max.y);
+        printf("area : %f \n", area);
+
+        // 후처리 - 메모리 해제 등
+        cvClearSeq(imageKeypoints);
+        cvClearSeq(imageDescriptors);
+        cvReleaseMemStorage(&storage);
     }
-    cv::rectangle(srcRGB, min, max, cvScalar(0,255,255), 1, 8, 0);
 
-    int width = max.x - min.x;
-    int height = max.y - min.y;
-    float area = width*height ; 
-    
-    printf("min x,y : %d, %d \n", min.x ,min.y);
-    printf("max x,y : %d ,%d \n", max.x ,max.y);
-    printf("area : %f \n", area);
-    
-    // 후처리 - 메모리 해제 등
-    cvClearSeq(imageKeypoints);
-    cvClearSeq(imageDescriptors);
-    cvReleaseMemStorage(&storage);
+        cv::resize(srcRGB, dstRGB, cv::Size(nw,nh), 0, 0, CV_INTER_LINEAR);
 
-    cv::resize(srcRGB, dstRGB, cv::Size(nw,nh), 0, 0, CV_INTER_LINEAR);
-    
-    return area;
-}
+        if (fcount < 20)
+            fcount++;
+        else
+            fcount = 0;
+
+        return area;//면적 반환 
+}   
 
 
 /**
