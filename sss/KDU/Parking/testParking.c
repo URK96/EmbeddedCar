@@ -1,12 +1,12 @@
-#include <stdio.h>  //
-#include <pthread.h> //
-#include <signal.h> //
-#include <sys/ipc.h> //
-#include <sys/msg.h> //
-#include <termios.h> //
-#include <sys/time.h> //
-#include <errno.h> //
-#include <syslog.h> //
+#include <stdio.h>
+#include <pthread.h>
+#include <signal.h>
+#include <sys/ipc.h>
+#include <sys/msg.h>
+#include <termios.h>
+#include <sys/time.h>
+#include <errno.h>
+#include <syslog.h>
 
 #include "util.h"
 #include "car_lib.h"
@@ -115,7 +115,7 @@ void speedPIDControl(int speed)
     DesireSpeed_Write(speed);
 }
 
-void* checkDistance(void *arg)
+void *checkDistance(void *arg)
 {
     int i;
 
@@ -129,6 +129,8 @@ void* checkDistance(void *arg)
         usleep(100000);
     }
 }
+
+
 
 void smoothSteeringControl(signed short endAngle, signed short tick, int usleepTick)
 {

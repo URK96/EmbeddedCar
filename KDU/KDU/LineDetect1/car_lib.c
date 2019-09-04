@@ -31,7 +31,6 @@
 static int uart_fd;
 static int i2c_fd;
 
-
 /*******************************************************************************
  *  Functions
  *******************************************************************************
@@ -286,7 +285,7 @@ void SpeedPIDProportional_Write(unsigned char gain)
     buf[3] = gain; 
     buf[4] = 0x96 + buf[3]; //checksum = 90 + 03 + 01 + buf[3]
     
-    printf("SpeedPIDProportional_WriteH = %d\n", buf[3]);
+    //printf("SpeedPIDProportional_WriteH = %d\n", buf[3]);
     write(uart_fd, &buf[0], 5);
 }
 
@@ -317,7 +316,7 @@ void SpeedPIDIntegral_Write(unsigned char gain)
     buf[3] = gain; 
     buf[4] = 0x97 + buf[3]; //checksum = 93 + 03 + 01 + buf[3]
     
-    printf("SpeedPIDIntegral_Write(void) = %d\n", buf[3]);
+    //printf("SpeedPIDIntegral_Write(void) = %d\n", buf[3]);
     write(uart_fd, &buf[0], 5);
 }
 
@@ -348,7 +347,7 @@ void SpeedPIDDifferential_Write(unsigned char gain)
     buf[3] = gain; 
     buf[4] = 0x98 + buf[3]; //checksum = 94 + 03 + 01 + buf[3]
     
-    printf("SpeedPIDDifferential_Write(void) = %d\n", buf[3]);
+    //printf("SpeedPIDDifferential_Write(void) = %d\n", buf[3]);
     write(uart_fd, &buf[0], 5);
 }
 
@@ -462,17 +461,8 @@ signed int EncoderCounter_Read(void)
 //  printf("Read Encoder Counter\n");
     write(uart_fd, &buf[0], 4);
     read(uart_fd, &read_buf[0], 7);
-	
-//	printf("CHECKSUMVALUE = %x\n", read_buf[6]);
-	
-	if(read_buf[6] != ((read_buf[0]+read_buf[1]+read_buf[2]+read_buf[3]+read_buf[4]+read_buf[5])%256))
-	{
-		return CHECKSUMERROR;
-	}
-    else
-	{
-		return ((signed int)(read_buf[5]<<24) + (signed int)(read_buf[4]<<16) + (signed int)(read_buf[3]<<8) + (signed int)(read_buf[2]));
-	}    
+    
+    return ((signed int)(read_buf[5]<<24) + (signed int)(read_buf[4]<<16) + (signed int)(read_buf[3]<<8) + (signed int)(read_buf[2]));
 }
 
 void EncoderCounter_Write(signed int position)
