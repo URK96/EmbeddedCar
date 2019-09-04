@@ -20,8 +20,10 @@ extern "C" {
 
 void ConvertImageForLCD(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh)
 {
-	Mat srcRGB(ih, iw, CV_8UC3, srcBuf);
+	//Mat srcRGB(ih, iw, CV_8UC3, srcBuf);
 	Mat dstRGB(nh, nw, CV_8UC3, outBuf);
+
+	srcRGB = Mat(ih, iw, CV_8UC3, srcBuf);
 
 	cv::resize(srcRGB, dstRGB, cv::Size(nw, nh), 0, 0, CV_INTER_LINEAR);
 }
@@ -46,12 +48,12 @@ void FindDriveLine(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf,
 	std::vector<cv::Vec2f> lines;
 	std::vector<cv::Vec2f>::const_iterator it;
 
-	Mat srcRGB(ih, iw, CV_8UC3, srcBuf);
-	Mat dstRGB(nh, nw, CV_8UC3, outBuf);
+	//Mat srcRGB(ih, iw, CV_8UC3, srcBuf);
+	//Mat dstRGB(nh, nw, CV_8UC3, outBuf);
 	Mat srcHSV;
 	Mat dstHSV;
 
-	cvtColor(srcRGB, srcHSW, CV_BGR2HSV);
+	cvtColor(srcRGB, srcHSV, CV_BGR2HSV);
 
 	IplImage *srcIpl = new IplImage(srcHSV);
 	IplImage *dstIpl = new IplImage(srcHSV);
@@ -130,11 +132,11 @@ void FindDriveLine(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf,
     {
         cv::Point pt1(0, driveLine.leftLine.rho/sin(driveLine.leftLine.theta));
 	    cv::Point pt2(result.cols, (driveLine.leftLine.rho-result.cols*cos(driveLine.leftLine.theta))/sin(driveLine.leftLine.theta));
-	    cv::line(dstHSV, pt1, pt2, lineColor, 1);
+	    //cv::line(dstHSV, pt1, pt2, lineColor, 1);
 
         cv::Point pt3(0, driveLine.rightLine.rho/sin(driveLine.rightLine.theta));
         cv::Point pt4(result.cols, (driveLine.rightLine.rho-result.cols*cos(driveLine.rightLine.theta))/sin(driveLine.rightLine.theta));
-        cv::line(dstHSV, pt3, pt4, lineColor, 1);
+        //cv::line(dstHSV, pt3, pt4, lineColor, 1);
 
         driveLine.VanishPoint = CalVanishPoint(pt1, pt2, pt3, pt4);
 
@@ -144,7 +146,7 @@ void FindDriveLine(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf,
     {
         cv::Point pt1(0, driveLine.leftLine.rho/sin(driveLine.leftLine.theta));
 	    cv::Point pt2(result.cols, (driveLine.leftLine.rho-result.cols*cos(driveLine.leftLine.theta))/sin(driveLine.leftLine.theta));
-	    cv::line(srcRGB, pt1, pt2, lineColor, 1);
+	    //cv::line(srcRGB, pt1, pt2, lineColor, 1);
 
         driveMode = DrivingMode.CURVERIGHT;
     }
@@ -152,13 +154,170 @@ void FindDriveLine(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf,
     {
         cv::Point pt1(0, driveLine.rightLine.rho/sin(driveLine.rightLine.theta));
 	    cv::Point pt2(result.cols, (driveLine.rightLine.rho-result.cols*cos(driveLine.rightLine.theta))/sin(driveLine.rightLine.theta));
-	    cv::line(srcRGB, pt1, pt2, lineColor, 1);
+	    //cv::line(srcRGB, pt1, pt2, lineColor, 1);
 
         driveMode = DrivingMode.CURVELEFT;
     }
     else
         driveLine.VanishPoint = new CvPoint(0, 0);
+}
 
+int CheckStopSign(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh)
+{
+    int i, j;
+	unsigned int stopSignCnt = 0;
+    
+    //Mat dstRGB(nh, nw, CV_8UC3, outBuf);
+    //Mat srcRGB(ih, iw, CV_8UC3, srcBuf);
+    Mat srcHSV;
+    Mat dstHSV;
+    Mat resRGB(ih, iw, CV_8UC3);
+
+    cvtColor(srcRGB, srcHSV, CV_BGR2HSV);
+
+    IplImage *iplImage = new IplImage(srcHSV);
+    IplImage *dstImage = new IplImage(srcHSV);
+
+	for (i = 0; i < iplImage->height; i++)
+	{
+		for (j = 0; j < iplImage->width; j++) 
+		{
+			if (
+					((unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + H] >= SSR_lowH &&
+                    (unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + H] <= SSR_highH &&
+					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + S] >= SSR_lowS &&
+					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + S] <= SSR_highS) &&
+					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + V] >= SSR_lowV &&
+					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + V] <= SSR_highV
+				)
+            {
+				dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)255;
+                dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)255;
+                dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)255;
+
+                stopSignCnt++;
+			}
+			else
+			{
+				dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)0;
+                dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)0;
+                dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)0;
+			}
+		}
+	}
+
+    return stopSignCnt;
+}
+
+TrafficLights FindTrafficLights(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh)
+{    
+    int i, j;
+	unsigned int colorCount[3] = { 0, 0, 0 };
+	TrafficLights light = RED;
+
+    //Mat dstRGB(nh, nw, CV_8UC3, outBuf);
+    //Mat srcRGB(ih, iw, CV_8UC3, srcBuf);
+    Mat srcHSV;
+    Mat dstHSV;
+    Mat resRGB(ih, iw, CV_8UC3);
+
+    cvtColor(srcRGB, srcHSV, CV_BGR2HSV);
+
+    IplImage *iplImage = new IplImage(srcHSV);
+    IplImage *dstImage = new IplImage(srcHSV);
+
+	for (i = 0; i < iplImage->height; i++)
+	{
+		for (j = 0; j < iplImage->width; j++) 
+		{
+			if (
+					((unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + H] >= Red_lowH &&
+                    (unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + H] <= Red_highH &&
+					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + S] >= Red_lowS &&
+					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + S] <= Red_highS) &&
+					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + V] >= Red_lowV &&
+					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + V] <= Red_highV
+				)
+            {
+				dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)255;
+                dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)255;
+                dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)255;
+
+				colorCount[0]++;
+			}
+			else
+			{
+				dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)0;
+                dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)0;
+                dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)0;
+			}
+		}
+	}
+
+	for (i = 0; i < iplImage->height; i++)
+	{
+		for (j = 0; j < iplImage->width; j++) 
+		{
+			if (
+					((unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + H] >= Yellow_lowH &&
+                    (unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + H] <= Yellow_highH &&
+					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + S] >= Yellow_lowS &&
+					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + S] <= Yellow_highS) &&
+					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + V] >= Yellow_lowV &&
+					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + V] <= Yellow_highV
+				)
+            {
+				dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)255;
+                dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)255;
+                dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)255;
+			
+				colorCount[1]++;
+			}
+			else
+			{
+				dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)0;
+                dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)0;
+                dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)0;
+			}
+		}
+	}
+
+	for (i = 0; i < iplImage->height; i++)
+	{
+		for (j = 0; j < iplImage->width; j++) 
+		{
+			if (
+					((unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + H] >= Green_lowH &&
+                    (unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + H] <= Green_highH &&
+					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + S] >= Green_lowS &&
+					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + S] <= Green_highS) &&
+					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + V] >= Green_lowV &&
+					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + V] <= Green_highV
+				)
+            {
+				dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)255;
+                dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)255;
+                dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)255;
+
+                colorCount[2]++;
+			}
+			else
+			{
+				dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)0;
+                dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)0;
+                dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)0;
+			}
+		}
+	}
+
+	if ((colorCount[0] > 100) && (colorCount[0] > colorCount[1]) && (colorCount[0] > colorCount[2]))
+		light = RED;
+	else if ((colorCount[1] > 100) && (colorCount[1] > colorCount[0]) && (colorCount[1] > colorCount[2]))
+		light = YELLOW;
+	else if ((colorCount[2] > 100) && (colorCount[2] > colorCount[0]) && (colorCount[2] > colorCount[1]))
+		light = GREEN;
+
+    return light;
 }
 
 

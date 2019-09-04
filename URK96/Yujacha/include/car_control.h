@@ -24,7 +24,8 @@ DriveLine driveLine;
 DrivingMode driveMode;
 
 void* positionSpeedControl(void *arg);
-void* CheckDistance(void *arg);
+void speedPIDControl(int speed);
+void LoopCheckDistance(int sensorIndex, int wantDistance, unsigned char isUp);
 void* LineStopThread(void *arg);
 void* ValanceThread(void *arg);
 

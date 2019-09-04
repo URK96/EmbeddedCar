@@ -114,7 +114,7 @@ void* ValanceThread(void *arg)
         int gapTick = gap / gapDiff;
         int sleepTick = 1000000;
 
-        if (dMode == STRAIGHT)
+        if (driveMode == STRAIGHT)
         {
             if (gap <= -gapDiff)
             {
@@ -135,7 +135,7 @@ void* ValanceThread(void *arg)
             else
                 SteeringServoControl_Write(valanceDegree);
         }
-        else if (dMode == CURVERIGHT)
+        else if (driveMode == CURVERIGHT)
         {
             int steerDegree = valanceDegree;
             int cameraXDegree = 1500;
@@ -148,7 +148,7 @@ void* ValanceThread(void *arg)
                 CameraXServoControl_Write(cameraXDegree);
             }
         }
-        else if (dMode == CURVELEFT)
+        else if (driveMode == CURVELEFT)
         {
 
         }*/
@@ -191,7 +191,7 @@ void* ValanceThread(void *arg)
             else
                 SteeringServoControl_Write(valanceDegree);
         } 
-        else if (dMode == CURVERIGHT)
+        else if (driveMode == CURVERIGHT)
         {
             printf("Drive Mode : CurveRight\n");
 
@@ -203,7 +203,7 @@ void* ValanceThread(void *arg)
 
             while (1)
             {
-                if (dMode == STRAIGHT)
+                if (driveMode == STRAIGHT)
                 {
                     SteeringServoControl_Write(valanceDegree);
                     break;
@@ -212,7 +212,7 @@ void* ValanceThread(void *arg)
                 usleep(5000);
             }
         }
-        else if (dMode == CURVELEFT)
+        else if (driveMode == CURVELEFT)
         {
             printf("Drive Mode : CurveLeft\n");
 
@@ -224,7 +224,7 @@ void* ValanceThread(void *arg)
 
             while (1)
             {
-                if (dMode == STRAIGHT)
+                if (driveMode == STRAIGHT)
                 {
                     SteeringServoControl_Write(valanceDegree);
                     break;
@@ -235,9 +235,9 @@ void* ValanceThread(void *arg)
         }
 
 
-        checkLine = true;
+        checkLine = 1;
 
-        if (dMode == STRAIGHT)
+        if (driveMode == STRAIGHT)
             usleep(5000);
     }
 

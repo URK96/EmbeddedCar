@@ -17,9 +17,10 @@
 #include "vpe-common.h"
 #include "drawing.h"
 #include "input_cmd.h"
-#include "exam_cv.h"
+//#include "exam_cv.h"
 #include "car_lib.h"
 #include "car_control.h"
+#include "imageProcess.h"
 
 
 #define CAPTURE_IMG_W       1280
@@ -60,8 +61,6 @@ typedef enum {
     DUMP_DONE
 }DumpState;
 
-
-
 typedef struct _DumpMsg{
     long type;
     int  state_msg;
@@ -83,7 +82,7 @@ struct thr_data {
 };
 
 /* variable declare */
-CvPoint vanishP;
+unsigned char sequence = 0;
 
 /**
   * @brief  Alloc vpe input buffer and a new buffer object
@@ -494,6 +493,8 @@ int main(int argc, char **argv)
         return -1;
     }
 
+    LoopCheckDistance(0, 3000, 1);
+
     CameraXServoControl_Write(1500);
     CameraYServoControl_Write(1755);  
 
@@ -523,11 +524,7 @@ int main(int argc, char **argv)
     }
     pthread_detach(tdata.threads[2]);
 
-    /*ret = pthread_create(&tdata.threads[3], NULL, ValanceThread, &tdata);
-    if(ret) {
-        MSG("Failed creating input thread");
-    }*/
-    ret = pthread_create(&tdata.threads[3], NULL, MoveThread, &tdata);
+    ret = pthread_create(&tdata.threads[3], NULL, ValanceThread, &tdata);
     if(ret) {
         MSG("Failed creating input thread");
     }
