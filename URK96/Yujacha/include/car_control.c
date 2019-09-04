@@ -164,7 +164,7 @@ void* ValanceThread(void *arg)
         printf("left theta : %f, right theta : %f\n", driveLine.leftLine.theta, driveLine.rightLine.theta);
         checkLine = 0;
 
-        if (dMode == STRAIGHT)
+        if (driveMode == STRAIGHT)
         {
             printf("Drive Mode : Straight\n");
 
