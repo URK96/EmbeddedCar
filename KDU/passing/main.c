@@ -662,17 +662,17 @@ void* passingThread(void *arg)
         //fprintf("%d %d %d %d %d %d\n", distance[0], distance[1], distance[2], distance[3], distance[4], distance[5])
         usleep(100000);
 
-	if(distance[0] > 2000){
+	if(distance[0] > 2000){//일정 거리보다 가까울 떄 오른쪽으로 이동
 	do{
 		SteeringServoControl_Write(1300);
-	}while(distance[0] < 100);
-		SteeringServoControl_Write(1500);}	
+	}while(distance[0] < 100);         //전방 적외선 카메라에 인식안될 때까지
+		SteeringServoControl_Write(1500);}	//바퀴 가운데로
 	
-	if(distance[5] < 100){
+	if(distance[5] < 100){   //좌측 적외선 센서에 아무것도 잡히지 않을 때
 		do{
-			SteeringServoControl_Write(1700);
-		}while(distance[3] < 100);
-		SteeringServoControl_Write(1500);
+			SteeringServoControl_Write(1700);  //바퀴 좌측 방향으로 이동
+		}while(distance[3] < 100);	//후방 카메라에 아무 것도 안잡힐 때 
+		SteeringServoControl_Write(1500);  //바퀴 정면 방향
 	}
     }
 }
