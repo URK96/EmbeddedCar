@@ -36,7 +36,8 @@ typedef enum
 {
     STRAIGHT,
     CURVELEFT,
-    CURVERIGHT
+    CURVERIGHT,
+	TUNNEL
 }DrivingMode;
 
 volatile int lane_Xmin, lane_Xmax,lane_Ymin, lane_Ymax;
@@ -169,17 +170,17 @@ void OpenCV_canny_edge_image(char* file, unsigned char* outBuf, int nw, int nh)
     Mat dstRGB(nh, nw, CV_8UC3, outBuf);
 
     cvtColor(srcRGB, srcGRAY, CV_BGR2GRAY);
-     // ÄÉ´Ï ¾Ë°í¸®Áò Àû¿ë
+     // \C4É´\CF \BEË°\ED\B8\AE\C1\F2 \C0\FB\BF\EB
     cv::Mat contours;
-    cv::Canny(srcGRAY, // ±×·¹ÀÌ·¹º§ ¿µ»ó
-        contours, // °á°ú ¿Ü°û¼±
-        125,  // ³·Àº °æ°è°ª
-        350);  // ³ôÀº °æ°è°ª
+    cv::Canny(srcGRAY, // \B1×·\B9\C0Ì·\B9\BA\A7 \BF\B5\BB\F3
+        contours, // \B0\E1\B0\FA \BFÜ°\FB\BC\B1
+        125,  // \B3\B7\C0\BA \B0\E6\B0è°ª
+        350);  // \B3\F4\C0\BA \B0\E6\B0è°ª
 
-    // ³ÍÁ¦·Î È­¼Ò·Î ¿Ü°û¼±À» Ç¥ÇöÇÏ¹Ç·Î Èæ¹é °ªÀ» ¹ÝÀü
-    //cv::Mat contoursInv; // ¹ÝÀü ¿µ»ó
+    // \B3\CD\C1\A6\B7\CE È­\BCÒ·\CE \BFÜ°\FB\BC\B1\C0\BB Ç¥\C7\F6\C7Ï¹Ç·\CE \C8\E6\B9\E9 \B0\AA\C0\BB \B9\DD\C0\FC
+    //cv::Mat contoursInv; // \B9\DD\C0\FC \BF\B5\BB\F3
     //cv::threshold(contours, contoursInv, 128, 255, cv::THRESH_BINARY_INV);
-    // ¹à±â °ªÀÌ 128º¸´Ù ÀÛÀ¸¸é 255°¡ µÇµµ·Ï ¼³Á¤
+    // \B9\E0\B1\E2 \B0\AA\C0\CC 128\BA\B8\B4\D9 \C0\DB\C0\B8\B8\E9 255\B0\A1 \B5Çµ\B5\B7\CF \BC\B3\C1\A4
  
     cvtColor(contours, contours, CV_GRAY2BGR);
     
@@ -266,16 +267,16 @@ DriveLine OpenCV_hough_transform(unsigned char* srcBuf, int iw, int ih, unsigned
 
     dstHSV = cvarrToMat(dstImage);
 
-    // Ä³´Ï ¾Ë°í¸®Áò Àû¿ë
+    // Ä³\B4\CF \BEË°\ED\B8\AE\C1\F2 \C0\FB\BF\EB
     cv::Mat contours;
     cv::Canny(dstHSV, contours, 125, 350);
     
-    // ¼± °¨Áö À§ÇÑ ÇãÇÁ º¯È¯
+    // \BC\B1 \B0\A8\C1\F6 \C0\A7\C7\D1 \C7\E3\C7\C1 \BA\AFÈ¯
     std::vector<cv::Vec2f> lines;
-    cv::HoughLines(contours, lines, 1, PI/180, 55);  // ÅõÇ¥(vote) ÃÖ´ë °³¼ö
+    cv::HoughLines(contours, lines, 1, PI/180, 55);  // \C5\F5Ç¥(vote) \C3Ö´\EB \B0\B3\BC\F6
    
 
-    // ¼± ±×¸®±â
+    // \BC\B1 \B1×¸\AE\B1\E2
     cv::Mat result(contours.rows, contours.cols, CV_8UC3, lineColor);
     //printf("Lines detected: %d\n", lines.size());
 
@@ -285,8 +286,8 @@ DriveLine OpenCV_hough_transform(unsigned char* srcBuf, int iw, int ih, unsigned
 
     while (it!=lines.end()) 
     {
-        float rho = (*it)[0];   // Ã¹ ¹øÂ° ¿ä¼Ò´Â rho °Å¸®
-        float theta = (*it)[1]; // µÎ ¹øÂ° ¿ä¼Ò´Â µ¨Å¸ °¢µµ
+        float rho = (*it)[0];   // Ã¹ \B9\F8Â° \BF\E4\BCÒ´\C2 rho \B0Å¸\AE
+        float theta = (*it)[1]; // \B5\CE \B9\F8Â° \BF\E4\BCÒ´\C2 \B5\A8Å¸ \B0\A2\B5\B5
 
         if(theta < 1.01 || theta > 3.12 )
         {
