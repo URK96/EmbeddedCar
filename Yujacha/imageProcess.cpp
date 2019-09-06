@@ -28,8 +28,6 @@ void ConvertImageForLCD(unsigned char* srcBuf, int iw, int ih, unsigned char* ou
 
 	srcRGB = Mat(ih, iw, CV_8UC3, srcBuf);
 
-	printf("Convert Image\n");
-
 	cv::resize(srcRGB, dstRGB, cv::Size(nw, nh), 0, 0, CV_INTER_LINEAR);
 }
 
@@ -251,17 +249,17 @@ TrafficLights FindTrafficLights()
 					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + V] <= Red_highV
 				)
             {
-				dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)255;
-                dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)255;
-                dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)255;
+				//dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)255;
+                //dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)255;
+                //dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)255;
 
 				colorCount[0]++;
 			}
 			else
 			{
-				dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)0;
-                dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)0;
-                dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)0;
+				//dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)0;
+                //dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)0;
+                //dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)0;
 			}
 		}
 	}
@@ -279,17 +277,17 @@ TrafficLights FindTrafficLights()
 					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + V] <= Yellow_highV
 				)
             {
-				dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)255;
-                dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)255;
-                dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)255;
+				//dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)255;
+                //dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)255;
+                //dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)255;
 			
 				colorCount[1]++;
 			}
 			else
 			{
-				dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)0;
-                dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)0;
-                dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)0;
+				//dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)0;
+                //dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)0;
+                //dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)0;
 			}
 		}
 	}
@@ -307,26 +305,28 @@ TrafficLights FindTrafficLights()
 					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + V] <= Green_highV
 				)
             {
-				dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)255;
-                dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)255;
-                dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)255;
+				//dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)255;
+                //dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)255;
+                //dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)255;
 
                 colorCount[2]++;
 			}
 			else
 			{
-				dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)0;
-                dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)0;
-                dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)0;
+				//dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)0;
+                //dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)0;
+                //dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)0;
 			}
 		}
 	}
 
-	if ((colorCount[0] > 50) && (colorCount[0] > colorCount[1]) && (colorCount[0] > colorCount[2]))
+	printf("Red : %d, Yellow : %d, Green: %d\n", colorCount[0], colorCount[1], colorCount[2]);
+
+	if ((colorCount[0] > 50) && (colorCount[1] < 10) && (colorCount[2] < 10))
 		light = RED;
-	else if ((colorCount[1] > 50) && (colorCount[1] > colorCount[0]) && (colorCount[1] > colorCount[2]))
+	else if ((colorCount[1] > 50) && (colorCount[0] < 10) && (colorCount[2] < 10))
 		light = YELLOW;
-	else if ((colorCount[2] > 50) && (colorCount[2] > colorCount[0]) && (colorCount[2] > colorCount[1]))
+	else if ((colorCount[2] > 50) && (colorCount[0] < 10) && (colorCount[1] < 10))
 		if (colorCount[2] < 200)
 			light = GREENARROW;
 		else

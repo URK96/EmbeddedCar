@@ -3,9 +3,6 @@
 #include "car_lib.h"
 #include "car_control.h"
 
-int distanceChannels[6] = { 1, 2, 3, 4, 5, 6 };
-int distance[6];
-
 void* positionSpeedControl(void *arg)
 {
     int position = 0, posRead = 0;
@@ -48,7 +45,7 @@ void* CheckDistance(void *arg)
     while (1)
     {
         for (i = 0; i < 6; ++i)
-            distance[i] = DistanceSensor(distanceChannels[i]);
+            distance[i] = DistanceSensor(distanceChannel[i]);
 
         //printf("%d %d %d %d %d %d\n", distance[0], distance[1], distance[2], distance[3], distance[4], distance[5]);
         usleep(100000);

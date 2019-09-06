@@ -1,5 +1,5 @@
-#ifndef _CAR_CONTROL_H_
-#define _CAR_CONTROL_H_
+#ifndef CAR_CONTROL_H_
+#define CAR_CONTROL_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,9 +29,9 @@ int speed, posInit, posDes;
 unsigned char gain;
 unsigned char enablePositionSpeed;
 unsigned char checkLine;
-//unsigned char missionSequence = 0;
+unsigned char missionSequence = 0;
 
-
+int distanceChannel[6] = { 1, 2, 3, 4, 5, 6 }, distance[6];
 
 DriveLine driveLine;
 DrivingMode driveMode;

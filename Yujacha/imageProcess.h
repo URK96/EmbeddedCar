@@ -44,9 +44,9 @@
 /* Green Detection Threshold */
 #define Green_lowH 50
 #define Green_highH 80
-#define Green_lowS 30
+#define Green_lowS 40
 #define Green_highS 255
-#define Green_lowV  30
+#define Green_lowV  40
 #define Green_highV 255
 
 

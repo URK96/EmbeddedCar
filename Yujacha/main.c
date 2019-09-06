@@ -389,9 +389,11 @@ void * input_thread(void *arg)
 
 void * MissionThread(void *arg)
 {
+    Winker_Write(ALL_OFF);
+
     LineStopThread();
 
-    CameraYServoControl_Write(1500);
+    CameraYServoControl_Write(1450);
 
     TrafficLights light;
 
@@ -401,6 +403,8 @@ void * MissionThread(void *arg)
 
         if (light == GREEN || light == GREENARROW)
             break;
+
+        printf("Light : %d\n", light);
 
         usleep(5000);
     }

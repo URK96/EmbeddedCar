@@ -18,17 +18,12 @@ using namespace cv;
 
 extern "C" {
 
-Mat srcRGB;
-CvPoint vanishP;
-
 void ConvertImageForLCD(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh)
 {
 	//Mat srcRGB(ih, iw, CV_8UC3, srcBuf);
 	Mat dstRGB(nh, nw, CV_8UC3, outBuf);
 
 	srcRGB = Mat(ih, iw, CV_8UC3, srcBuf);
-
-	printf("Convert Image\n");
 
 	cv::resize(srcRGB, dstRGB, cv::Size(nw, nh), 0, 0, CV_INTER_LINEAR);
 }
@@ -49,11 +44,9 @@ void FindDriveLine(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf,
 	const unsigned char H = 0, S = 1, V = 2;
 	float tempLine[2][2] = {{0, 0}, {0, 0}};
 
-	Scalar lineColor = cv::Scalar(255, 0, 0);
 	cv::Mat contours;
 	std::vector<cv::Vec2f> lines;
 	std::vector<cv::Vec2f>::const_iterator it;
-	
 
 	//Mat srcRGB(ih, iw, CV_8UC3, srcBuf);
 	//Mat dstRGB(nh, nw, CV_8UC3, outBuf);
@@ -71,33 +64,31 @@ void FindDriveLine(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf,
 		{
 			if 
 			(
-				((unsigned char)srcIpl->imageData[i*srcIpl->widthStep + 3 * k + H] >= LY_lowH &&
-				(unsigned char)srcIpl->imageData[i*srcIpl->widthStep + 3 * k + H] <= LY_highH &&
-				(unsigned char)srcIpl->imageData[i*srcIpl->widthStep + 3 * k + S] >= LY_lowS &&
-				(unsigned char)srcIpl->imageData[i*srcIpl->widthStep + 3 * k + S] <= LY_highS &&
-				(unsigned char)srcIpl->imageData[i*srcIpl->widthStep + 3 * k + V] >= LY_lowV &&
-				(unsigned char)srcIpl->imageData[i*srcIpl->widthStep + 3 * k + V] <= LY_highV)
+				((unsigned char)iplImage->imageData[i*srcIpl->widthStep + 3 * j + HUE] >= LY_lowH &&
+				(unsigned char)iplImage->imageData[i*srcIpl->widthStep + 3 * j + HUE] <= LY_highH &&
+				(unsigned char)iplImage->imageData[i*srcIpl->widthStep + 3 * j + SAT] >= LY_lowS &&
+				(unsigned char)iplImage->imageData[i*srcIpl->widthStep + 3 * j + SAT] <= LY_highS &&
+				(unsigned char)iplImage->imageData[i*srcIpl->widthStep + 3 * j + VAL] >= LY_lowV &&
+				(unsigned char)iplImage->imageData[i*srcIpl->widthStep + 3 * j + VAL] <= LY_highV)
 			)
 			{
-                dstIpl->imageData[i*dstIpl->widthStep + 3 * k + S] = (unsigned char)255;
-                dstIpl->imageData[i*dstIpl->widthStep + 3 * k + V] = (unsigned char)255;
-				dstIpl->imageData[i*dstIpl->widthStep + 3 * k + H] = (unsigned char)255;
+                dstImage->imageData[i*dstIpl->widthStep + 3 * j + SAT] = (unsigned char)255;
+                dstImage->imageData[i*dstIpl->widthStep + 3 * j + VAL] = (unsigned char)255;
+				dstImage->imageData[i*dstIpl->widthStep + 3 * j + HUE] = (unsigned char)255;
 			}
 			else
 			{
-				dstIpl->imageData[i*dstIpl->widthStep + 3 * k + H] = (unsigned char)0;
-                dstIpl->imageData[i*dstIpl->widthStep + 3 * k + S] = (unsigned char)0;
-                dstIpl->imageData[i*dstIpl->widthStep + 3 * k + V] = (unsigned char)0;
+				dstImage->imageData[i*dstIpl->widthStep + 3 * j + HUE] = (unsigned char)0;
+                dstImage->imageData[i*dstIpl->widthStep + 3 * j + SAT] = (unsigned char)0;
+                dstImage->imageData[i*dstIpl->widthStep + 3 * j + VAL] = (unsigned char)0;
 			}
 		}
 	}
 
-	dstHSV = cvarrToMat(dstIpl);
+	dstHSV = cvarrToMat(dstImage);
 
 	cv::Canny(dstHSV, contours, 125, 350);
 	cv::HoughLines(contours, lines, 1, PI/180, 55);
-
-	cv::Mat result(contours.rows, contours.cols, CV_8UC3, lineColor);
 
 	it = lines.begin();
 
@@ -147,9 +138,9 @@ void FindDriveLine(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf,
         cv::Point pt4(result.cols, (driveLine.rightLine.rho-result.cols*cos(driveLine.rightLine.theta))/sin(driveLine.rightLine.theta));
         //cv::line(dstHSV, pt3, pt4, lineColor, 1);
 
-        vanishP = CalVanishPoint(pt1, pt2, pt3, pt4);
+        driveLine.VanishPoint = CalVanishPoint(pt1, pt2, pt3, pt4);
 
-        driveMode = STRAIGHT;
+        driveMode = DrivingMode.STRAIGHT;
     }
     else if (driveLine.leftLine.theta && !driveLine.rightLine.theta)
     {
@@ -157,7 +148,7 @@ void FindDriveLine(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf,
 	    cv::Point pt2(result.cols, (driveLine.leftLine.rho-result.cols*cos(driveLine.leftLine.theta))/sin(driveLine.leftLine.theta));
 	    //cv::line(srcRGB, pt1, pt2, lineColor, 1);
 
-        driveMode = CURVERIGHT;
+        driveMode = DrivingMode.CURVERIGHT;
     }
     else if (!driveLine.leftLine.theta && driveLine.rightLine.theta)
     {
@@ -165,13 +156,10 @@ void FindDriveLine(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf,
 	    cv::Point pt2(result.cols, (driveLine.rightLine.rho-result.cols*cos(driveLine.rightLine.theta))/sin(driveLine.rightLine.theta));
 	    //cv::line(srcRGB, pt1, pt2, lineColor, 1);
 
-        driveMode = CURVELEFT;
+        driveMode = DrivingMode.CURVELEFT;
     }
     else
-	{
-        vanishP.x = 0;
-		vanishP.y = 0;
-	}
+        driveLine.VanishPoint = new CvPoint(0, 0);
 }
 
 int CheckStopSign(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh)
@@ -221,7 +209,7 @@ int CheckStopSign(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, 
     return stopSignCnt;
 }
 
-TrafficLights FindTrafficLights()
+TrafficLights FindTrafficLights(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh)
 {    
     int i, j;
 	unsigned int colorCount[3] = { 0, 0, 0 };
@@ -231,7 +219,7 @@ TrafficLights FindTrafficLights()
     //Mat srcRGB(ih, iw, CV_8UC3, srcBuf);
     Mat srcHSV;
     Mat dstHSV;
-    //Mat resRGB(ih, iw, CV_8UC3);
+    Mat resRGB(ih, iw, CV_8UC3);
 
     cvtColor(srcRGB, srcHSV, CV_BGR2HSV);
 
@@ -327,10 +315,7 @@ TrafficLights FindTrafficLights()
 	else if ((colorCount[1] > 50) && (colorCount[1] > colorCount[0]) && (colorCount[1] > colorCount[2]))
 		light = YELLOW;
 	else if ((colorCount[2] > 50) && (colorCount[2] > colorCount[0]) && (colorCount[2] > colorCount[1]))
-		if (colorCount[2] < 200)
-			light = GREENARROW;
-		else
-			light = GREEN;
+		light = GREEN;
 
     return light;
 }

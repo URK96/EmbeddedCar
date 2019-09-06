@@ -1,0 +1,14 @@
+{
+    "files.associations": {
+        "cmath": "cpp",
+        "cstddef": "c",
+        "limits": "c",
+        "memory": "c",
+        "system_error": "c",
+        "type_traits": "c",
+        "xiosbase": "c",
+        "xlocale": "c",
+        "xutility": "c",
+        "stdio.h": "c"
+    }
+}
