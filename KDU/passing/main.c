@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <signal.h>
 #include <pthread.h>
 #include <sys/ipc.h>
@@ -86,6 +87,8 @@ struct thr_data {
     pthread_t threads[5];
 };
 
+int channel[6] = { 1, 2, 3, 4, 5, 6 }, distance[6];
+
 /* variable declare */
 CvPoint vanishP;
 
@@ -96,7 +99,6 @@ unsigned char gain;
 bool enablePositionSpeed;
 bool checkLine;
 DrivingMode dMode;
-unsigned int ssCount;
 
 void* positionSpeedControl(void *arg)
 {
@@ -233,6 +235,7 @@ static void hough_transform(struct display *disp, struct buffer *cambuf)
                 dMode = CURVELEFT;
                 break;
             default:
+				
                 break;
         }
 
@@ -613,29 +616,6 @@ void * ValanceThread(void *arg)
     return NULL;
 }
 
-void * ValanceThread(void *arg)
-{
-    struct thr_data *data = (struct thr_data *)arg;
-
-    while (1)
-    {
-        if (ssCount >= 300)
-            break;
-
-        usleep(50000);
-    }
-
-    while (1)
-    {
-        if (ssCount <= 10)
-            break;
-
-        usleep(50000);
-    }
-
-    return;
-}
-
 static struct thr_data* pexam_data = NULL;
 
 /**
@@ -668,18 +648,32 @@ void signal_handler(int sig)
     }
 }
 
-void *checkDistance(void *arg)
+void* passingThread(void *arg)
 {
-    int i;
+ 
+   int i;
 
     while (1)
-    {
+    {	speed = 150;
         for (i = 0; i < 6; ++i)
             distance[i] = DistanceSensor(channel[i]);
 
         printf("%d %d %d %d %d %d\n", distance[0], distance[1], distance[2], distance[3], distance[4], distance[5]);
         //fprintf("%d %d %d %d %d %d\n", distance[0], distance[1], distance[2], distance[3], distance[4], distance[5])
         usleep(100000);
+
+	if(distance[0] > 2000){//일정 거리보다 가까울 떄 오른쪽으로 이동
+	do{
+		SteeringServoControl_Write(1300);
+	}while(distance[0] < 100);         //전방 적외선 카메라에 인식안될 때까지
+		SteeringServoControl_Write(1500);}	//바퀴 가운데로
+	
+	if(distance[5] < 100){   //좌측 적외선 센서에 아무것도 잡히지 않을 때
+		do{
+			SteeringServoControl_Write(1700);  //바퀴 좌측 방향으로 이동
+		}while(distance[3] < 100);	//후방 카메라에 아무 것도 안잡힐 때 
+		SteeringServoControl_Write(1500);  //바퀴 정면 방향
+	}
     }
 }
 
@@ -759,13 +753,13 @@ int main(int argc, char **argv)
     }
 
     CameraXServoControl_Write(1500);
-    CameraYServoControl_Write(1600);  
+    CameraYServoControl_Write(1755);  
 
     posInit = 0;
-    posDes = 200;
+    posDes = 100;
     gain = 10;
     speed = 150;
-    enablePositionSpeed = false;
+    enablePositionSpeed = true;
 
     pexam_data = &tdata;
 
@@ -790,12 +784,14 @@ int main(int argc, char **argv)
     /*ret = pthread_create(&tdata.threads[3], NULL, ValanceThread, &tdata);
     if(ret) {
         MSG("Failed creating input thread");
-    }
-    ret = pthread_create(&tdata.threads[3], NULL, MoveThread, &tdata);
+    }*/
+
+   ret = pthread_create(&tdata.threads[3], NULL, MoveThread, &tdata);
     if(ret) {
         MSG("Failed creating input thread");
-    }*/
+    }
     pthread_detach(tdata.threads[3]);
+ 
 
     ret = pthread_create(&tdata.threads[4], NULL, positionSpeedControl, &tdata);
     if(ret) {
@@ -803,15 +799,21 @@ int main(int argc, char **argv)
     }
     pthread_detach(tdata.threads[4]);
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    	ret = pthread_create(&tdata.threads[5], NULL, passingThread, &tdata);
+    	if(ret) {
+        MSG("Failed creating tunnel thread");
+            }
+        pthread_detach(tdata.threads[5]);
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
     /* register signal handler for <CTRL>+C in order to clean up */
     if(signal(SIGINT, signal_handler) == SIG_ERR) {
         MSG("could not register signal handler");
         closelog();
         exit(EXIT_FAILURE);
     }
-
-    
-
 
     pause();
 
