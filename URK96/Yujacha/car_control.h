@@ -31,13 +31,14 @@ unsigned char enablePositionSpeed;
 unsigned char checkLine;
 //unsigned char missionSequence = 0;
 
-
+int distance[6];
 
 DriveLine driveLine;
 DrivingMode driveMode;
 
 void* positionSpeedControl(void *arg);
 void speedPIDControl(int speed);
+void* CheckDistance(void *arg);
 void LoopCheckDistance(int sensorIndex, int wantDistance, unsigned char isUp);
 void LineStopThread();
 void* ValanceThread(void *arg);

@@ -208,17 +208,16 @@ static void draw_operatingtime(struct display *disp, uint32_t time)
                  cambuf: vpe output buffer that converted capture image
   * @retval none
   */
-
+float buff;
+float midX;
  //위로 올려야 함 !!!! 
- float buff;
-
 static void hough_transform(struct display *disp, struct buffer *cambuf)
 {
     unsigned char srcbuf[VPE_OUTPUT_W*VPE_OUTPUT_H*3];
     uint32_t optime;
     struct timeval st, et;
     int mode;
-
+    
     unsigned char* cam_pbuf[4];
     if(get_framebuf(cambuf, cam_pbuf) == 0) 
     {
@@ -226,7 +225,7 @@ static void hough_transform(struct display *disp, struct buffer *cambuf)
 
         gettimeofday(&st, NULL);
         
-        buff = Rotary(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, &mode);//문제 있음 area를 못받아옴,음수 나옴  
+        Rotary(srcbuf, VPE_OUTPUT_W, VPE_OUTPUT_H, cam_pbuf[0], VPE_OUTPUT_W, VPE_OUTPUT_H, &buff, &midX);//문제 있음 area를 못받아옴,음수 나옴  
         
         printf("buff in hough_transform= %f \n",buff);
         
@@ -540,103 +539,32 @@ void * MoveThread(void *arg)//흰색 일시정지 라인 체크&카메라 전방
 void * ValanceThread(void *arg)
 {
     struct thr_data *data = (struct thr_data *)arg;
-    int valanceDegree = 1530;//바퀴 정중앙
-    int centerX = 160;//소실점 x좌표
 
-    float centerRightTheta = 2.20;
+    int valanceDegree = 1530;
+    int centerX = 160;
+    int gap = 0;
 
-    //SteeringServoControl_Write(valanceDegree);
+    SteeringServoControl_Write(valanceDegree);
 
-    while (1)//소실점기준직진,옛날것
+    while (1)
     {
-       
-        float gap = driveLine.rightLine.theta - centerRightTheta;
-        float gapDiff = 0.05;
-        int gapTick = gap / gapDiff;
-        int sleepTick = 500000;
-        //int steerP = 50;
+        gap = (int)midX - centerX;
 
-        printf("Check Drive Mode \n");
-        printf("left theta : %f, right theta : %f\n", driveLine.leftLine.theta, driveLine.rightLine.theta);
-        checkLine = false;
-
-        if (dMode == STRAIGHT)
+        if (gap > 0)
         {
-            printf("Drive Mode : Straight\n");
-
-            if (gap <= -gapDiff)//왼쪽에서 가운데로 맞춰주기
-            {
-                printf("left -> center\n");
-                SteeringServoControl_Write(valanceDegree + gapTick * 140);
-                usleep(sleepTick);
-                SteeringServoControl_Write(valanceDegree - gapTick * 100);
-                usleep(sleepTick);
-                SteeringServoControl_Write(valanceDegree);
-                //usleep(100000);
-            }
-            else if (gap >= gapDiff)//오른쪽에서 가운데로 맞춰주기
-            {
-                printf("right -> center\n");
-                SteeringServoControl_Write(valanceDegree + gapTick * 140);
-                usleep(sleepTick);
-                SteeringServoControl_Write(valanceDegree - gapTick * 100);
-                usleep(sleepTick);
-                SteeringServoControl_Write(valanceDegree);
-                //usleep(100000);
-            }
-            else
-                SteeringServoControl_Write(valanceDegree);//그냥 직진하기
-        } 
-        else if (dMode == CURVERIGHT)
-        {
-            printf("Drive Mode : CurveRight\n");
-
-            //usleep(1000000);
-
-            //SteeringServoControl_Write(valanceDegree + 100);
-            //usleep(500000);
-            SteeringServoControl_Write(valanceDegree - 450);
-
-            while (1)
-            {
-                if (dMode == STRAIGHT)
-                {
-                    SteeringServoControl_Write(valanceDegree);
-                    break;
-                }
-
-                usleep(5000);
-            }
+            SteeringServoControl_Write(valanceDegree - 3 * gap);
         }
-        else if (dMode == CURVELEFT)
+        else if (gap < 0)
         {
-            printf("Drive Mode : CurveLeft\n");
-
-            //usleep(500000);
-
-            //SteeringServoControl_Write(valanceDegree - 100);
-            //usleep(500000);
-            SteeringServoControl_Write(valanceDegree + 450);
-
-            while (1)
-            {
-                if (dMode == STRAIGHT)
-                {
-                    SteeringServoControl_Write(valanceDegree);
-                    break;
-                }
-
-                usleep(5000);
-            }
+            SteeringServoControl_Write(valanceDegree - 3 * gap);
+        }
+        else
+        {
+            SteeringServoControl_Write(valanceDegree);
         }
 
-
-        checkLine = true;
-
-        if (dMode == STRAIGHT)
-            usleep(5000);
+        usleep(10000);
     }
-
 
     return NULL;
 }
@@ -749,10 +677,10 @@ int main(int argc, char **argv)
     }
 
     CameraXServoControl_Write(1500);
-    CameraYServoControl_Write(1755);  
+    CameraYServoControl_Write(1500);  
 
     posInit = 0;
-    posDes = 100;
+    posDes = 200;
     gain = 10;
     speed = 150;
     enablePositionSpeed = true;
@@ -777,14 +705,14 @@ int main(int argc, char **argv)
     }
     pthread_detach(tdata.threads[2]);
 
-    /*ret = pthread_create(&tdata.threads[3], NULL, ValanceThread, &tdata);
-    if(ret) {
-        MSG("Failed creating input thread");
-    }*/
-    ret = pthread_create(&tdata.threads[3], NULL, MoveThread, &tdata);
+    ret = pthread_create(&tdata.threads[3], NULL, ValanceThread, &tdata);
     if(ret) {
         MSG("Failed creating input thread");
     }
+    /*ret = pthread_create(&tdata.threads[3], NULL, MoveThread, &tdata);
+    if(ret) {
+        MSG("Failed creating input thread");
+    }*/
     pthread_detach(tdata.threads[3]);
 
     ret = pthread_create(&tdata.threads[4], NULL, positionSpeedControl, &tdata);

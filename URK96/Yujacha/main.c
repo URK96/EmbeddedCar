@@ -20,6 +20,7 @@
 //#include "exam_cv.h"
 #include "car_lib.h"
 #include "car_control.h"
+#include "car_parking.h"
 #include "imageProcess.h"
 
 
@@ -387,11 +388,60 @@ void * input_thread(void *arg)
     return NULL;
 }
 
-void * MissionThread(void *arg)
+void* MissionThread(void *arg)
 {
+    CarLight_Write(ALL_OFF);
+    checkLine = 1;
+
+    LoopCheckDistance(1, 1000, 1);
+    LoopCheckDistance(5, 1000, 1);
+
+    checkLine = 0;
+
+    int i;
+    int angle_l = 1600;
+    int angle_r = 1400;
+
+    CarLight_Write(ALL_ON);
+
+    while (1)
+    {		
+	    if(distance[1] > distance[5])
+            SteeringServoControl_Write(angle_l);
+	    else if(distance[1] < distance[5])
+			SteeringServoControl_Write(angle_r);
+
+        if (distance[1] < 500 || distance[5] < 500)
+            break;
+
+        usleep(100000);
+    }
+
+    CarLight_Write(ALL_OFF);
+
+    checkLine = 1;
+    
+    return NULL;
+}
+
+void ParkingMission()
+{
+    checkLine = 0;
+
+    ParallelParking();
+}
+
+void TrafficLightMission()
+{
+    int sub_degree = 1530;
+    int degree = 1530;
+    char sensor;
+
+    Winker_Write(ALL_OFF);
+
     LineStopThread();
 
-    CameraYServoControl_Write(1500);
+    CameraYServoControl_Write(1450);
 
     TrafficLights light;
 
@@ -402,15 +452,52 @@ void * MissionThread(void *arg)
         if (light == GREEN || light == GREENARROW)
             break;
 
+        printf("Light : %d\n", light);
+
         usleep(5000);
     }
 
     if (light == GREEN)
+    {
         Winker_Write(RIGHT_ON);
+        degree -= 300;
+        sub_degree += 100;
+        driveMode = CURVELEFT;
+    }
     else if (light == GREENARROW)
+    {
         Winker_Write(LEFT_ON);
+        degree += 300;
+        sub_degree -= 100;
+        driveMode = CURVELEFT;
+    }
+
+    checkLine = 0;
+    enablePositionSpeed = 1;
+
+    SteeringServoControl_Write(sub_degree);
+
+    usleep(800000);
+
+    SteeringServoControl_Write(degree);
     
-    return NULL;
+    usleep(3000000);
+
+    SteeringServoControl_Write(1530);
+
+    while (1)
+    {
+        sensor = LineSensor_Read();
+
+        if (sensor == 0)
+            break;
+
+        usleep(100);
+    }
+
+    usleep(1000000);
+
+    enablePositionSpeed = 0;
 }
 
 static struct thr_data* pexam_data = NULL;
@@ -567,6 +654,12 @@ int main(int argc, char **argv)
         MSG("Failed creating input thread");
     }
     pthread_detach(tdata.threads[5]);
+
+    ret = pthread_create(&tdata.threads[6], NULL, CheckDistance, &tdata);
+    if(ret) {
+        MSG("Failed creating input thread");
+    }
+    pthread_detach(tdata.threads[6]);
 
     /* register signal handler for <CTRL>+C in order to clean up */
     if(signal(SIGINT, signal_handler) == SIG_ERR) {

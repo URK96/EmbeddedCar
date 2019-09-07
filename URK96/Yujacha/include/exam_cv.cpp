@@ -164,17 +164,17 @@ void OpenCV_canny_edge_image(char* file, unsigned char* outBuf, int nw, int nh)
     Mat dstRGB(nh, nw, CV_8UC3, outBuf);
 
     cvtColor(srcRGB, srcGRAY, CV_BGR2GRAY);
-     // ï¿½É´ï¿½ ï¿½Ë°ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+     // ÄÉ´Ï ¾Ë°í¸®Áò Àû¿ë
     cv::Mat contours;
-    cv::Canny(srcGRAY, // ï¿½×·ï¿½ï¿½Ì·ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
-        contours, // ï¿½ï¿½ï¿½ ï¿½Ü°ï¿½ï¿½ï¿½
-        125,  // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½è°ª
-        350);  // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½è°ª
+    cv::Canny(srcGRAY, // ±×·¹ÀÌ·¹º§ ¿µ»ó
+        contours, // °á°ú ¿Ü°û¼±
+        125,  // ³·Àº °æ°è°ª
+        350);  // ³ôÀº °æ°è°ª
 
-    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ È­ï¿½Ò·ï¿½ ï¿½Ü°ï¿½ï¿½ï¿½ï¿½ï¿½ Ç¥ï¿½ï¿½ï¿½Ï¹Ç·ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
-    //cv::Mat contoursInv; // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+    // ³ÍÁ¦·Î È­¼Ò·Î ¿Ü°û¼±À» Ç¥ÇöÇÏ¹Ç·Î Èæ¹é °ªÀ» ¹ÝÀü
+    //cv::Mat contoursInv; // ¹ÝÀü ¿µ»ó
     //cv::threshold(contours, contoursInv, 128, 255, cv::THRESH_BINARY_INV);
-    // ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ 128ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 255ï¿½ï¿½ ï¿½Çµï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+    // ¹à±â °ªÀÌ 128º¸´Ù ÀÛÀ¸¸é 255°¡ µÇµµ·Ï ¼³Á¤
  
     cvtColor(contours, contours, CV_GRAY2BGR);
     
@@ -191,6 +191,212 @@ void OpenCV_canny_edge_image(char* file, unsigned char* outBuf, int nw, int nh)
              nh : height v of destination buffer
   * @retval none
   */
+DriveLine OpenCV_hough_transform(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, int* mode)
+{
+    CvPoint ptv = {0,0};
+
+    Scalar lineColor = cv::Scalar(255, 0, 0);
+    Scalar yellow(131, 232, 252);
+
+    DriveLine dLine;
+    
+    Mat dstRGB(nh, nw, CV_8UC3, outBuf);
+    Mat srcRGB(ih, iw, CV_8UC3, srcBuf);
+    Mat srcHSV;
+    Mat dstHSV;
+    Mat resRGB(ih, iw, CV_8UC3);
+
+    cvtColor(srcRGB, srcHSV, CV_BGR2HSV);
+
+    IplImage *iplImage = new IplImage(srcHSV);
+    IplImage *dstImage = new IplImage(srcHSV); //cvCreateImage(cvSize(ih, iw), IPL_DEPTH_8U, 1);
+
+    int i, j;
+	const unsigned char HUE = 0, SAT = 1, VAL = 2;
+	unsigned int StopSignCnt = 0;
+	lane_Xmin = iplImage->width;
+	lane_Xmax = 0;
+	lane_Ymin = iplImage->height;
+	lane_Xmax = 0;
+
+	int ROI_Xs = (int)(iplImage->width * _ROI_Xmin), ROI_Xd = (int)(iplImage->width * _ROI_Xmax);
+	int ROI_Ys = (int)(iplImage->height * current_Y_min), ROI_Yd = (int)(iplImage->height * _ROI_Ymax);
+	
+	for (i = 0; i < iplImage->height; i++)
+	{
+		for (j = 0; j < iplImage->width; j++) 
+		{
+			if (/* Range to detect (Lane : Yellow or White) */
+				// ROI range condition
+				/*(i > MAX(0, ROI_Ys) && i < MIN(iplImage->height, ROI_Yd) &&
+				j > MAX(0, ROI_Xs) && j < MIN(iplImage->width, ROI_Xd))
+				&&*/
+				// Color condition to detect
+				(
+					// Yellow Lane
+					((unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + HUE] >= LY_lowH &&
+					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + HUE] <= LY_highH &&
+					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + SAT] >= LY_lowS &&
+					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + SAT] <= LY_highS &&
+					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + VAL] >= LY_lowV &&
+					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + VAL] <= LY_highV)
+			   ))
+			{
+				dstImage->imageData[i*dstImage->widthStep + 3 * j + HUE] = (unsigned char)255;
+                dstImage->imageData[i*dstImage->widthStep + 3 * j + SAT] = (unsigned char)255;
+                dstImage->imageData[i*dstImage->widthStep + 3 * j + VAL] = (unsigned char)255;
+				if (j < lane_Xmin) lane_Xmin = j;
+				if (j > lane_Xmax) lane_Xmax = j;
+				if (j < lane_Ymin) lane_Ymin = j;
+				if (j > lane_Ymax) lane_Ymax = j;
+			}
+			else // elsewhere
+			{
+				dstImage->imageData[i*dstImage->widthStep + 3 * j + HUE] = (unsigned char)0;
+                dstImage->imageData[i*dstImage->widthStep + 3 * j + SAT] = (unsigned char)0;
+                dstImage->imageData[i*dstImage->widthStep + 3 * j + VAL] = (unsigned char)0;
+			}
+		}
+	}
+
+    dstHSV = cvarrToMat(dstImage);
+
+    // Ä³´Ï ¾Ë°í¸®Áò Àû¿ë
+    cv::Mat contours;
+    cv::Canny(dstHSV, contours, 125, 350);
+    
+    // ¼± °¨Áö À§ÇÑ ÇãÇÁ º¯È¯
+    std::vector<cv::Vec2f> lines;
+    cv::HoughLines(contours, lines, 1, PI/180, 55);  // ÅõÇ¥(vote) ÃÖ´ë °³¼ö
+   
+
+    // ¼± ±×¸®±â
+    cv::Mat result(contours.rows, contours.cols, CV_8UC3, lineColor);
+    //printf("Lines detected: %d\n", lines.size());
+
+    float temp[2][2] = {{0,0}, {0,0}};
+
+    std::vector<cv::Vec2f>::const_iterator it=lines.begin();
+
+    while (it!=lines.end()) 
+    {
+        float rho = (*it)[0];   // Ã¹ ¹øÂ° ¿ä¼Ò´Â rho °Å¸®
+        float theta = (*it)[1]; // µÎ ¹øÂ° ¿ä¼Ò´Â µ¨Å¸ °¢µµ
+
+        if(theta < 1.01 || theta > 3.12 )
+        {
+            ++it;
+            continue;
+        }
+
+        if (theta < PI/2.)
+        {
+            if (temp[0][1] < theta)
+            {
+                temp[0][0] = rho;
+                temp[0][1] = theta;
+            }
+        }
+        else
+        {
+            if (temp[1][1] < theta)
+            {
+                temp[1][0] = rho;
+                temp[1][1] = theta;
+            }
+        }
+
+        ++it;
+    }
+
+    dLine.leftLine.rho = temp[0][0];
+    dLine.leftLine.theta = temp[0][1];
+    dLine.rightLine.rho = temp[1][0];
+    dLine.rightLine.theta = temp[1][1];
+
+    if (temp[0][1] && temp[1][1])
+    {
+        cv::Point pt1(0, temp[0][0]/sin(temp[0][1]));
+	    cv::Point pt2(result.cols, (temp[0][0]-result.cols*cos(temp[0][1]))/sin(temp[0][1]));
+	    cv::line(dstHSV, pt1, pt2, lineColor, 1);
+
+        cv::Point pt3(0, temp[1][0]/sin(temp[1][1]));
+        cv::Point pt4(result.cols, (temp[1][0]-result.cols*cos(temp[1][1]))/sin(temp[1][1]));
+        cv::line(dstHSV, pt3, pt4, lineColor, 1);
+
+        ptv = CalVanishPoint(pt1, pt2, pt3, pt4);
+
+        dLine.VanishPoint = ptv;
+
+        *mode = 0;
+    }
+    else if (temp[0][1] && !temp[1][1])
+    {
+        cv::Point pt1(0, temp[0][0]/sin(temp[0][1]));
+	    cv::Point pt2(result.cols, (temp[0][0]-result.cols*cos(temp[0][1]))/sin(temp[0][1]));
+	    cv::line(srcRGB, pt1, pt2, lineColor, 1);
+
+        *mode = 1;
+    }
+    else if (!temp[0][1] && temp[1][1])
+    {
+        cv::Point pt1(0, temp[1][0]/sin(temp[1][1]));
+	    cv::Point pt2(result.cols, (temp[1][0]-result.cols*cos(temp[1][1]))/sin(temp[1][1]));
+	    cv::line(srcRGB, pt1, pt2, lineColor, 1);
+
+        *mode = 2;
+    }
+    else
+    {
+        dLine.VanishPoint = ptv;
+
+        *mode = 3;
+    }
+
+	/* left line */
+	//cv::Point pt1(0, temp[0][0]/sin(temp[0][1]));
+	//cv::Point pt2(result.cols, (temp[0][0]-result.cols*cos(temp[0][1]))/sin(temp[0][1]));
+	//cv::line(srcRGB, pt1, pt2, lineColor, 1);
+
+	/* right line */
+    //cv::Point pt3(0, temp[1][0]/sin(temp[1][1]));
+    //cv::Point pt4(result.cols, (temp[1][0]-result.cols*cos(temp[1][1]))/sin(temp[1][1]));
+    //cv::line(srcRGB, pt3, pt4, lineColor, 1);
+
+#if 0
+	cv::circle(srcRGB, pt1, 10, (0,0,255));
+	cv::circle(srcRGB, pt2, 10, (0,0,255));
+	cv::circle(srcRGB, pt3, 10, (0,0,255));
+	cv::circle(srcRGB, pt4, 10, (0,0,255));
+#endif
+
+#if 0
+	printf("pt1 : %d %d\n", pt1.x, pt1.y);
+	printf("pt2 : %d %d\n", pt2.x, pt2.y);
+	printf("pt3 : %d %d\n", pt3.x, pt3.y);
+	printf("pt4 : %d %d\n", pt4.x, pt4.y);
+#endif
+
+    
+
+    //printf("vanish point : %d %d\n", ptv.x, ptv.y);
+    //cv::circle(srcRGB, ptv, 7, (255,255,255), 3);
+
+    cv::resize(dstHSV, dstRGB, cv::Size(nw, nh), 0, 0, CV_INTER_LINEAR);
+
+    return dLine;
+}
+
+CvPoint CalVanishPoint(CvPoint pt1, CvPoint pt2, CvPoint pt3, CvPoint pt4)
+{
+	CvPoint ptv = {0,0};	
+	
+	ptv.x = 320 * (pt3.y-pt1.y) / (pt2.y-pt1.y+pt3.y-pt4.y);
+	ptv.y = (pt2.y-pt1.y) * ptv.x / 320 + pt1.y;
+
+	return ptv;
+}
+
 
 /**
   * @brief  Merge two source images of the same size into the output buffer.

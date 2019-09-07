@@ -18,6 +18,9 @@ using namespace cv;
 
 extern "C" {
 
+Mat srcRGB;
+CvPoint vanishP;
+
 void ConvertImageForLCD(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh)
 {
 	//Mat srcRGB(ih, iw, CV_8UC3, srcBuf);
@@ -44,12 +47,11 @@ void FindDriveLine(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf,
 	const unsigned char H = 0, S = 1, V = 2;
 	float tempLine[2][2] = {{0, 0}, {0, 0}};
 
+	Scalar lineColor = cv::Scalar(255, 0, 0);
 	cv::Mat contours;
 	std::vector<cv::Vec2f> lines;
 	std::vector<cv::Vec2f>::const_iterator it;
-
-	//Mat srcRGB(ih, iw, CV_8UC3, srcBuf);
-	//Mat dstRGB(nh, nw, CV_8UC3, outBuf);
+	
 	Mat srcHSV;
 	Mat dstHSV;
 
@@ -64,31 +66,33 @@ void FindDriveLine(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf,
 		{
 			if 
 			(
-				((unsigned char)iplImage->imageData[i*srcIpl->widthStep + 3 * j + HUE] >= LY_lowH &&
-				(unsigned char)iplImage->imageData[i*srcIpl->widthStep + 3 * j + HUE] <= LY_highH &&
-				(unsigned char)iplImage->imageData[i*srcIpl->widthStep + 3 * j + SAT] >= LY_lowS &&
-				(unsigned char)iplImage->imageData[i*srcIpl->widthStep + 3 * j + SAT] <= LY_highS &&
-				(unsigned char)iplImage->imageData[i*srcIpl->widthStep + 3 * j + VAL] >= LY_lowV &&
-				(unsigned char)iplImage->imageData[i*srcIpl->widthStep + 3 * j + VAL] <= LY_highV)
+				((unsigned char)srcIpl->imageData[i*srcIpl->widthStep + 3 * k + H] >= LY_lowH &&
+				(unsigned char)srcIpl->imageData[i*srcIpl->widthStep + 3 * k + H] <= LY_highH &&
+				(unsigned char)srcIpl->imageData[i*srcIpl->widthStep + 3 * k + S] >= LY_lowS &&
+				(unsigned char)srcIpl->imageData[i*srcIpl->widthStep + 3 * k + S] <= LY_highS &&
+				(unsigned char)srcIpl->imageData[i*srcIpl->widthStep + 3 * k + V] >= LY_lowV &&
+				(unsigned char)srcIpl->imageData[i*srcIpl->widthStep + 3 * k + V] <= LY_highV)
 			)
 			{
-                dstImage->imageData[i*dstIpl->widthStep + 3 * j + SAT] = (unsigned char)255;
-                dstImage->imageData[i*dstIpl->widthStep + 3 * j + VAL] = (unsigned char)255;
-				dstImage->imageData[i*dstIpl->widthStep + 3 * j + HUE] = (unsigned char)255;
+                dstIpl->imageData[i*dstIpl->widthStep + 3 * k + S] = (unsigned char)255;
+                dstIpl->imageData[i*dstIpl->widthStep + 3 * k + V] = (unsigned char)255;
+				dstIpl->imageData[i*dstIpl->widthStep + 3 * k + H] = (unsigned char)255;
 			}
 			else
 			{
-				dstImage->imageData[i*dstIpl->widthStep + 3 * j + HUE] = (unsigned char)0;
-                dstImage->imageData[i*dstIpl->widthStep + 3 * j + SAT] = (unsigned char)0;
-                dstImage->imageData[i*dstIpl->widthStep + 3 * j + VAL] = (unsigned char)0;
+				dstIpl->imageData[i*dstIpl->widthStep + 3 * k + H] = (unsigned char)0;
+                dstIpl->imageData[i*dstIpl->widthStep + 3 * k + S] = (unsigned char)0;
+                dstIpl->imageData[i*dstIpl->widthStep + 3 * k + V] = (unsigned char)0;
 			}
 		}
 	}
 
-	dstHSV = cvarrToMat(dstImage);
+	dstHSV = cvarrToMat(dstIpl);
 
 	cv::Canny(dstHSV, contours, 125, 350);
 	cv::HoughLines(contours, lines, 1, PI/180, 55);
+
+	cv::Mat result(contours.rows, contours.cols, CV_8UC3, lineColor);
 
 	it = lines.begin();
 
@@ -138,9 +142,9 @@ void FindDriveLine(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf,
         cv::Point pt4(result.cols, (driveLine.rightLine.rho-result.cols*cos(driveLine.rightLine.theta))/sin(driveLine.rightLine.theta));
         //cv::line(dstHSV, pt3, pt4, lineColor, 1);
 
-        driveLine.VanishPoint = CalVanishPoint(pt1, pt2, pt3, pt4);
+        vanishP = CalVanishPoint(pt1, pt2, pt3, pt4);
 
-        driveMode = DrivingMode.STRAIGHT;
+        driveMode = STRAIGHT;
     }
     else if (driveLine.leftLine.theta && !driveLine.rightLine.theta)
     {
@@ -148,7 +152,7 @@ void FindDriveLine(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf,
 	    cv::Point pt2(result.cols, (driveLine.leftLine.rho-result.cols*cos(driveLine.leftLine.theta))/sin(driveLine.leftLine.theta));
 	    //cv::line(srcRGB, pt1, pt2, lineColor, 1);
 
-        driveMode = DrivingMode.CURVERIGHT;
+        driveMode = CURVERIGHT;
     }
     else if (!driveLine.leftLine.theta && driveLine.rightLine.theta)
     {
@@ -156,10 +160,13 @@ void FindDriveLine(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf,
 	    cv::Point pt2(result.cols, (driveLine.rightLine.rho-result.cols*cos(driveLine.rightLine.theta))/sin(driveLine.rightLine.theta));
 	    //cv::line(srcRGB, pt1, pt2, lineColor, 1);
 
-        driveMode = DrivingMode.CURVELEFT;
+        driveMode = CURVELEFT;
     }
     else
-        driveLine.VanishPoint = new CvPoint(0, 0);
+	{
+        vanishP.x = 0;
+		vanishP.y = 0;
+	}
 }
 
 int CheckStopSign(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh)
@@ -209,7 +216,7 @@ int CheckStopSign(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, 
     return stopSignCnt;
 }
 
-TrafficLights FindTrafficLights(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh)
+TrafficLights FindTrafficLights()
 {    
     int i, j;
 	unsigned int colorCount[3] = { 0, 0, 0 };
@@ -219,7 +226,7 @@ TrafficLights FindTrafficLights(unsigned char* srcBuf, int iw, int ih, unsigned 
     //Mat srcRGB(ih, iw, CV_8UC3, srcBuf);
     Mat srcHSV;
     Mat dstHSV;
-    Mat resRGB(ih, iw, CV_8UC3);
+    //Mat resRGB(ih, iw, CV_8UC3);
 
     cvtColor(srcRGB, srcHSV, CV_BGR2HSV);
 
@@ -239,17 +246,17 @@ TrafficLights FindTrafficLights(unsigned char* srcBuf, int iw, int ih, unsigned 
 					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + V] <= Red_highV
 				)
             {
-				dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)255;
-                dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)255;
-                dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)255;
+				//dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)255;
+                //dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)255;
+                //dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)255;
 
 				colorCount[0]++;
 			}
 			else
 			{
-				dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)0;
-                dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)0;
-                dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)0;
+				//dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)0;
+                //dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)0;
+                //dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)0;
 			}
 		}
 	}
@@ -267,17 +274,17 @@ TrafficLights FindTrafficLights(unsigned char* srcBuf, int iw, int ih, unsigned 
 					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + V] <= Yellow_highV
 				)
             {
-				dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)255;
-                dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)255;
-                dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)255;
+				//dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)255;
+                //dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)255;
+                //dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)255;
 			
 				colorCount[1]++;
 			}
 			else
 			{
-				dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)0;
-                dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)0;
-                dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)0;
+				//dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)0;
+                //dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)0;
+                //dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)0;
 			}
 		}
 	}
@@ -295,27 +302,32 @@ TrafficLights FindTrafficLights(unsigned char* srcBuf, int iw, int ih, unsigned 
 					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + V] <= Green_highV
 				)
             {
-				dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)255;
-                dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)255;
-                dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)255;
+				//dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)255;
+                //dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)255;
+                //dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)255;
 
                 colorCount[2]++;
 			}
 			else
 			{
-				dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)0;
-                dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)0;
-                dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)0;
+				//dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)0;
+                //dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)0;
+                //dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)0;
 			}
 		}
 	}
 
-	if ((colorCount[0] > 50) && (colorCount[0] > colorCount[1]) && (colorCount[0] > colorCount[2]))
+	printf("Red : %d, Yellow : %d, Green: %d\n", colorCount[0], colorCount[1], colorCount[2]);
+
+	if ((colorCount[0] > 50) && (colorCount[1] < 10) && (colorCount[2] < 10))
 		light = RED;
-	else if ((colorCount[1] > 50) && (colorCount[1] > colorCount[0]) && (colorCount[1] > colorCount[2]))
+	else if ((colorCount[1] > 50) && (colorCount[0] < 10) && (colorCount[2] < 10))
 		light = YELLOW;
-	else if ((colorCount[2] > 50) && (colorCount[2] > colorCount[0]) && (colorCount[2] > colorCount[1]))
-		light = GREEN;
+	else if ((colorCount[2] > 20) && (colorCount[0] < 10) && (colorCount[1] < 10))
+		if (colorCount[2] < 70)
+			light = GREENARROW;
+		else
+			light = GREEN;
 
     return light;
 }

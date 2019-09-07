@@ -1,5 +1,5 @@
-#ifndef _IMAGE_PROCESS_H_
-#define _IMAGE_PROCESS_H_ 
+#ifndef IMAGE_PROCESS_H_
+#define IMAGE_PROCESS_H_ 
 
 #define PI 3.1415926
 
@@ -62,13 +62,16 @@ typedef enum TrafficLights
     GREENARROW
 }TrafficLights;
 
+Mat srcRGB;
+CvPoint vanishP;
+
 const unsigned char H = 0, S = 1, V = 2;
 
 void ConvertImageForLCD(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh);
 CvPoint CalVanishPoint(CvPoint pt1, CvPoint pt2, CvPoint pt3, CvPoint pt4);
 void FindDriveLine(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh);
 int CheckStopSign(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh);
-TrafficLights FindTrafficLights();
+TrafficLights FindTrafficLights(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh);
 
 
 #ifdef __cplusplus

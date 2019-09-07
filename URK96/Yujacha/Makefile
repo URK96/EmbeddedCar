@@ -27,8 +27,8 @@ all: $(TARGET)
 clean:
 	rm -f *.a *.o $(TARGET) *.lo
 
-$(TARGET): main.c v4l2.lo display-kms.lo util.lo vpe-common.lo input_cmd.lo drawing.lo exam_cv.lo car_lib.lo car_control.lo imageProcess.lo
-	$(CC) $(CFLAGS) -o $@ main.c v4l2.lo display-kms.lo util.lo vpe-common.lo input_cmd.lo drawing.lo exam_cv.lo car_lib.lo car_control.lo imageProcess.lo $(LDFLAGS)
+$(TARGET): main.c v4l2.lo display-kms.lo util.lo vpe-common.lo input_cmd.lo drawing.lo car_lib.lo car_control.lo car_parking.lo imageProcess.lo
+	$(CC) $(CFLAGS) -o $@ main.c v4l2.lo display-kms.lo util.lo vpe-common.lo input_cmd.lo drawing.lo car_lib.lo car_control.lo car_parking.lo imageProcess.lo $(LDFLAGS)
 
 v4l2.lo: v4l2.c v4l2.h
 	$(CC) -c $(CFLAGS) -o $@ v4l2.c
@@ -48,14 +48,14 @@ drawing.lo: drawing.c drawing.h font_8x8.h
 input_cmd.lo: input_cmd.cpp input_cmd.h
 	$(CXX) -c $(CXXFLAGS) -o $@ input_cmd.cpp
 
-exam_cv.lo: exam_cv.cpp exam_cv.h
-	$(CXX) -c $(CXXFLAGS) -o $@ exam_cv.cpp
-
 car_lib.lo: car_lib.c car_lib.h
 	$(CC) -c $(CFLAGS) -o $@ car_lib.c
 
 car_control.lo: car_control.c car_control.h
 	$(CC) -c $(CFLAGS) -o $@ car_control.c
+
+car_parking.lo: car_parking.c car_parking.h
+	$(CC) -c $(CFLAGS) -o $@ car_parking.c
 
 imageProcess.lo: imageProcess.cpp imageProcess.h
 	$(CXX) -c $(CXXFLAGS) -o $@ imageProcess.cpp

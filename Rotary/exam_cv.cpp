@@ -211,11 +211,10 @@ void OpenCV_canny_edge_image(char* file, unsigned char* outBuf, int nw, int nh)
 const int DIM_VECTOR = 128;
 
 
-float Rotary(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, int* mode)
+void Rotary(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh, float* area, float* midX)
 {
     CvPoint2D32f max;
-    CvPoint2D32f min;
-    float area;
+    CvPoint2D32f min; 
 
     Mat srcRGB(ih, iw, CV_8UC3, srcBuf);
     Mat dstRGB(nh, nw, CV_8UC3, outBuf);   
@@ -278,11 +277,16 @@ float Rotary(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int n
 
         float width = max.x - min.x;
         float height = max.y - min.y;
-        area = width*height ; 
+        *area = width*height ;
+
+        *midX =(max.x + min.x) / 2;
+        
 
         printf("min x,y : %f, %f \n", min.x ,min.y);
         printf("max x,y : %f ,%f \n", max.x ,max.y);
-        printf("area : %f \n", area);
+        printf("area : %f \n", *area);
+
+        printf("mid x : %f \n", *midX);
 
         // 후처리 - 메모리 해제 등
         cvClearSeq(imageKeypoints);
@@ -290,14 +294,7 @@ float Rotary(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int n
         cvReleaseMemStorage(&storage);
     }
 
-        cv::resize(srcRGB, dstRGB, cv::Size(nw,nh), 0, 0, CV_INTER_LINEAR);
-
-        if (fcount < 20)
-            fcount++;
-        else
-            fcount = 0;
-
-        return area;//면적 반환 
+    cv::resize(srcRGB, dstRGB, cv::Size(nw,nh), 0, 0, CV_INTER_LINEAR);
 }   
 
 

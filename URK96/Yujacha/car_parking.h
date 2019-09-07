@@ -12,7 +12,8 @@ typedef enum
     right = 1
 }SteerDirection;
 
-
+void ParallelParking();
+void VerticalParking();
 
 #ifdef __cplusplus
 }

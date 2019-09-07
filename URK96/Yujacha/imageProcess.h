@@ -27,10 +27,10 @@
 
 /* Red Detection Threshold */
 #define Red_lowH 170
-#define Red_highH 175
+#define Red_highH 180
 #define Red_lowS 50
 #define Red_highS 255
-#define Red_lowV  90
+#define Red_lowV  20
 #define Red_highV 255
 
 /* Yellow Detection Threshold */
@@ -42,12 +42,12 @@
 #define Yellow_highV 255
 
 /* Green Detection Threshold */
-#define Green_lowH 50
+#define Green_lowH 60
 #define Green_highH 80
-#define Green_lowS 40
-#define Green_highS 255
-#define Green_lowV  40
-#define Green_highV 255
+#define Green_lowS 30
+#define Green_highS 150
+#define Green_lowV  30
+#define Green_highV 100
 
 
 #ifdef __cplusplus

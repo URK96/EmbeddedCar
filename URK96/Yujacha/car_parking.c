@@ -3,7 +3,7 @@
 #include "util.h"
 #include "car_lib.h"
 #include "car_control.h"
-
+#include "car_parking.h"
 
 void ParallelParking()
 {
@@ -47,10 +47,6 @@ void ParallelParking()
 
     SteeringServoControl_Write(1050);
 
-    propGain = 20;
-    integralGain = 20;
-    differentialGain = 20;
-
     speedPIDControl(-30);
 
 
@@ -58,7 +54,7 @@ void ParallelParking()
 
     printf("Check 1st Back Wall distance...\n");
 
-    LoopCheckDistance(3, 750, 1);
+    LoopCheckDistance(3, 700, 1);
 
     
     SteeringServoControl_Write(1250);
@@ -69,7 +65,7 @@ void ParallelParking()
 
     printf("Check 2nd Back Wall distance...\n");
 
-    LoopCheckDistance(3, 600, 1);
+    LoopCheckDistance(3, 500, 1);
 
 
     // Start cehck back wall (Handling)
@@ -84,7 +80,7 @@ void ParallelParking()
 
     printf("Check 4rd back distance...\n");
 
-    LoopCheckDistance(3, 2000, 1);
+    LoopCheckDistance(3, 2500, 1);
 
     printf("Stop Vehicle!\n");
 
@@ -93,7 +89,7 @@ void ParallelParking()
 
     speedPIDControl(0);
 
-    SteeringServoControl_Write(1000);
+    SteeringServoControl_Write(1100);
 
     enablePositionSpeed = 1;
 
@@ -108,7 +104,7 @@ void ParallelParking()
 
     speedPIDControl(-10);
 
-    LoopCheckDistance(3, 2500, 1);
+    LoopCheckDistance(3, 4000, 1);
 
     printf("Stop Vehicle!\n");
 
@@ -121,11 +117,57 @@ void ParallelParking()
 
     SteeringServoControl_Write(2000);
 
+    posDes = 100;
+    speed = 100;
     enablePositionSpeed = 1;
 
-    LoopCheckDistance(3, 1000, 0);
+    //LoopCheckDistance(0, 1400, 1);
 
+    while (1)
+    {
+        if (distance[0] <= 500)
+            break;
+
+        if (distance[0] >= 1400)
+        {
+            usleep(500000);
+
+            enablePositionSpeed = 0;
+
+            SteeringServoControl_Write(1000);
+
+            speedPIDControl(-30);
+
+            LoopCheckDistance(3, 1800, 1);
+
+            speedPIDControl(0);
+
+            SteeringServoControl_Write(2000);
+
+            enablePositionSpeed = 1;
+
+            break;
+        }
+
+        usleep(5000);
+    }
+
+    printf("Out Parking Area\n");
+
+    usleep(3000000);
+    
     SteeringServoControl_Write(1100);
+
+    usleep(2000000);
+
+    posDes = 200;
+    speed = 150;
+
+    checkLine = 1;
+
+    //SteeringServoControl_Write(1100);
+
+    //speed = 150;
 
 
     // Other code is running with camera
@@ -165,10 +207,6 @@ void VerticalParking()
     printf("Stop Vehicle!\n");
 
     SteeringServoControl_Write(1100);
-
-    propGain = 20;
-    integralGain = 20;
-    differentialGain = 20;
 
     speedPIDControl(-30);
 
