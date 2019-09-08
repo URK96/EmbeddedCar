@@ -230,7 +230,7 @@ void Rotary(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw
         CvMemStorage* storage = cvCreateMemStorage(0);
         CvSeq* imageKeypoints = 0;
         CvSeq* imageDescriptors = 0;
-        CvSURFParams params = cvSURFParams(1300, 1);
+        CvSURFParams params = cvSURFParams(700, 1);
 
         // 영상으로부터 SURF 특징 추출
         cvExtractSURF(grayImage, 0, &imageKeypoints, &imageDescriptors, storage, params);
@@ -251,9 +251,7 @@ void Rotary(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw
             center.y = cvRound(point->pt.y);
 
             radius = cvRound(point->size * 1.2 / 9.0 * 2.0);
-            //cv::line(dstHSV, pt1(temp[0][0], temp[0][1]),pt2, lineColor, 1); 
-            //temp1 = center; 
-            //temp2 = radius ; 
+
             if (i == 0)
             {
                 max.x = min.x = center.x;
@@ -269,9 +267,7 @@ void Rotary(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw
             {
                 min.x = center.x;
                 min.y = center.y;
-            } 
-
-            //cv::circle(srcRGB, temp1, temp2, cvScalar(0,255,255), 1, 8, 0);
+            }
         }
         cv::rectangle(srcRGB, min, max, cvScalar(0,255,255), 1, 8, 0);
 
