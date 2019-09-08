@@ -230,7 +230,7 @@ void Rotary(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw
         CvMemStorage* storage = cvCreateMemStorage(0);
         CvSeq* imageKeypoints = 0;
         CvSeq* imageDescriptors = 0;
-        CvSURFParams params = cvSURFParams(700, 1);
+        CvSURFParams params = cvSURFParams(300, 1);
 
         // 영상으로부터 SURF 특징 추출
         cvExtractSURF(grayImage, 0, &imageKeypoints, &imageDescriptors, storage, params);
