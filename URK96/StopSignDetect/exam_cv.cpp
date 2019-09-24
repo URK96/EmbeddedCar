@@ -169,17 +169,17 @@ void OpenCV_canny_edge_image(char* file, unsigned char* outBuf, int nw, int nh)
     Mat dstRGB(nh, nw, CV_8UC3, outBuf);
 
     cvtColor(srcRGB, srcGRAY, CV_BGR2GRAY);
-     // ÄÉ´Ï ¾Ë°í¸®Áò Àû¿ë
+     // ï¿½É´ï¿½ ï¿½Ë°ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     cv::Mat contours;
-    cv::Canny(srcGRAY, // ±×·¹ÀÌ·¹º§ ¿µ»ó
-        contours, // °á°ú ¿Ü°û¼±
-        125,  // ³·Àº °æ°è°ª
-        350);  // ³ôÀº °æ°è°ª
+    cv::Canny(srcGRAY, // ï¿½×·ï¿½ï¿½Ì·ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+        contours, // ï¿½ï¿½ï¿½ ï¿½Ü°ï¿½ï¿½ï¿½
+        125,  // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½è°ª
+        350);  // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½è°ª
 
-    // ³ÍÁ¦·Î È­¼Ò·Î ¿Ü°û¼±À» Ç¥ÇöÇÏ¹Ç·Î Èæ¹é °ªÀ» ¹ÝÀü
-    //cv::Mat contoursInv; // ¹ÝÀü ¿µ»ó
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ È­ï¿½Ò·ï¿½ ï¿½Ü°ï¿½ï¿½ï¿½ï¿½ï¿½ Ç¥ï¿½ï¿½ï¿½Ï¹Ç·ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+    //cv::Mat contoursInv; // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     //cv::threshold(contours, contoursInv, 128, 255, cv::THRESH_BINARY_INV);
-    // ¹à±â °ªÀÌ 128º¸´Ù ÀÛÀ¸¸é 255°¡ µÇµµ·Ï ¼³Á¤
+    // ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ 128ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 255ï¿½ï¿½ ï¿½Çµï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
  
     cvtColor(contours, contours, CV_GRAY2BGR);
     
@@ -259,16 +259,16 @@ DriveLine OpenCV_hough_transform(unsigned char* srcBuf, int iw, int ih, unsigned
 
     dstHSV = cvarrToMat(dstImage);
 
-    // Ä³´Ï ¾Ë°í¸®Áò Àû¿ë
+    // Ä³ï¿½ï¿½ ï¿½Ë°ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     /*cv::Mat contours;
     cv::Canny(dstHSV, contours, 125, 350);
     
-    // ¼± °¨Áö À§ÇÑ ÇãÇÁ º¯È¯
+    // ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½È¯
     std::vector<cv::Vec2f> lines;
-    cv::HoughLines(contours, lines, 1, PI/180, 55);  // ÅõÇ¥(vote) ÃÖ´ë °³¼ö
+    cv::HoughLines(contours, lines, 1, PI/180, 55);  // ï¿½ï¿½Ç¥(vote) ï¿½Ö´ï¿½ ï¿½ï¿½ï¿½ï¿½
    
 
-    // ¼± ±×¸®±â
+    // ï¿½ï¿½ ï¿½×¸ï¿½ï¿½ï¿½
     cv::Mat result(contours.rows, contours.cols, CV_8UC3, lineColor);
     //printf("Lines detected: %d\n", lines.size());
 
@@ -278,8 +278,8 @@ DriveLine OpenCV_hough_transform(unsigned char* srcBuf, int iw, int ih, unsigned
 
     while (it!=lines.end()) 
     {
-        float rho = (*it)[0];   // Ã¹ ¹øÂ° ¿ä¼Ò´Â rho °Å¸®
-        float theta = (*it)[1]; // µÎ ¹øÂ° ¿ä¼Ò´Â µ¨Å¸ °¢µµ
+        float rho = (*it)[0];   // Ã¹ ï¿½ï¿½Â° ï¿½ï¿½Ò´ï¿½ rho ï¿½Å¸ï¿½
+        float theta = (*it)[1]; // ï¿½ï¿½ ï¿½ï¿½Â° ï¿½ï¿½Ò´ï¿½ ï¿½ï¿½Å¸ ï¿½ï¿½ï¿½ï¿½
 
         if(theta < 1.01 || theta > 3.12 )
         {

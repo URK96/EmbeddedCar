@@ -31,7 +31,7 @@ void ConvertImageForLCD(unsigned char* srcBuf, int iw, int ih, unsigned char* ou
 	cv::resize(srcRGB, dstRGB, cv::Size(nw, nh), 0, 0, CV_INTER_LINEAR);
 }
 
-CvPoint CalVanishPoint(CvPoint pt1, CvPoint pt2, CvPoint pt3, CvPoint pt4)
+/*CvPoint CalVanishPoint(CvPoint pt1, CvPoint pt2, CvPoint pt3, CvPoint pt4)
 {
 	CvPoint ptv = {0,0};	
 	
@@ -39,13 +39,15 @@ CvPoint CalVanishPoint(CvPoint pt1, CvPoint pt2, CvPoint pt3, CvPoint pt4)
 	ptv.y = (pt2.y-pt1.y) * ptv.x / 320 + pt1.y;
 
 	return ptv;
-}
+}*/
 
-void FindDriveLine(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh)
+void FindDriveLine()
 {
 	int i, k;
 	const unsigned char H = 0, S = 1, V = 2;
 	float tempLine[2][2] = {{0, 0}, {0, 0}};
+	float avgLine[2][2] = {{0, 0}, {0, 0}};
+	int lineCount[2] = {0, 0};
 
 	Scalar lineColor = cv::Scalar(255, 0, 0);
 	cv::Mat contours;
@@ -64,6 +66,14 @@ void FindDriveLine(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf,
 	{
 		for (k = 0; k < srcIpl->width; ++k)
 		{
+			if (i <= 120)
+			{
+				dstIpl->imageData[i*dstIpl->widthStep + 3 * k + H] = (unsigned char)0;
+                dstIpl->imageData[i*dstIpl->widthStep + 3 * k + S] = (unsigned char)0;
+                dstIpl->imageData[i*dstIpl->widthStep + 3 * k + V] = (unsigned char)0;
+				continue;
+			}
+
 			if 
 			(
 				((unsigned char)srcIpl->imageData[i*srcIpl->widthStep + 3 * k + H] >= LY_lowH &&
@@ -90,7 +100,7 @@ void FindDriveLine(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf,
 	dstHSV = cvarrToMat(dstIpl);
 
 	cv::Canny(dstHSV, contours, 125, 350);
-	cv::HoughLines(contours, lines, 1, PI/180, 55);
+	cv::HoughLines(contours, lines, 2, PI/180, 45);
 
 	cv::Mat result(contours.rows, contours.cols, CV_8UC3, lineColor);
 
@@ -101,11 +111,7 @@ void FindDriveLine(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf,
         float rho = (*it)[0];
         float theta = (*it)[1];
 
-        if(theta < 1.01 || theta > 3.12 )
-        {
-            ++it;
-            continue;
-        }
+		//printf("rho : %f, theta : %f\n", rho, theta);
 
         if (theta < PI/2.)
         {
@@ -114,6 +120,11 @@ void FindDriveLine(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf,
                 tempLine[0][0] = rho;
                 tempLine[0][1] = theta;
             }
+
+			/*avgLine[0][0] += rho;
+			avgLine[0][1] += theta;
+
+			lineCount[0] += 1;*/
         }
         else
         {
@@ -122,6 +133,11 @@ void FindDriveLine(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf,
                 tempLine[1][0] = rho;
                 tempLine[1][1] = theta;
             }
+
+			/*avgLine[1][0] += rho;
+			avgLine[1][1] += theta;
+
+			lineCount[1] += 1;*/
         }
 
         ++it;
@@ -131,6 +147,14 @@ void FindDriveLine(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf,
     driveLine.leftLine.theta = tempLine[0][1];
     driveLine.rightLine.rho = tempLine[1][0];
     driveLine.rightLine.theta = tempLine[1][1];
+
+	/*lineCount[0] = (lineCount[0] == 0) ? 1 : lineCount[0];
+	lineCount[1] = (lineCount[1] == 0) ? 1 : lineCount[1];
+
+	driveLine.leftLine.rho = avgLine[0][0] / lineCount[0];
+	driveLine.leftLine.theta = avgLine[0][1] / lineCount[0];
+	driveLine.rightLine.rho = avgLine[1][0] / lineCount[1];
+	driveLine.rightLine.theta = avgLine[1][1] / lineCount[1];*/
 
     if (driveLine.leftLine.theta && driveLine.rightLine.theta)
     {
@@ -142,7 +166,7 @@ void FindDriveLine(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf,
         cv::Point pt4(result.cols, (driveLine.rightLine.rho-result.cols*cos(driveLine.rightLine.theta))/sin(driveLine.rightLine.theta));
         //cv::line(dstHSV, pt3, pt4, lineColor, 1);
 
-        vanishP = CalVanishPoint(pt1, pt2, pt3, pt4);
+        //vanishP = CalVanishPoint(pt1, pt2, pt3, pt4);
 
         driveMode = STRAIGHT;
     }
@@ -174,11 +198,8 @@ int CheckStopSign(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, 
     int i, j;
 	unsigned int stopSignCnt = 0;
     
-    //Mat dstRGB(nh, nw, CV_8UC3, outBuf);
-    //Mat srcRGB(ih, iw, CV_8UC3, srcBuf);
     Mat srcHSV;
     Mat dstHSV;
-    Mat resRGB(ih, iw, CV_8UC3);
 
     cvtColor(srcRGB, srcHSV, CV_BGR2HSV);
 
@@ -222,11 +243,8 @@ TrafficLights FindTrafficLights()
 	unsigned int colorCount[3] = { 0, 0, 0 };
 	TrafficLights light = RED;
 
-    //Mat dstRGB(nh, nw, CV_8UC3, outBuf);
-    //Mat srcRGB(ih, iw, CV_8UC3, srcBuf);
     Mat srcHSV;
     Mat dstHSV;
-    //Mat resRGB(ih, iw, CV_8UC3);
 
     cvtColor(srcRGB, srcHSV, CV_BGR2HSV);
 
@@ -323,7 +341,7 @@ TrafficLights FindTrafficLights()
 		light = RED;
 	else if ((colorCount[1] > 50) && (colorCount[0] < 10) && (colorCount[2] < 10))
 		light = YELLOW;
-	else if ((colorCount[2] > 20) && (colorCount[0] < 10) && (colorCount[1] < 10))
+	else if ((colorCount[2] > 10) && (colorCount[0] < 10) && (colorCount[1] < 10))
 		if (colorCount[2] < 70)
 			light = GREENARROW;
 		else

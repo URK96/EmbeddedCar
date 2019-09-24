@@ -25,7 +25,7 @@ typedef struct DriveLine
 }DriveLine;
 
 
-int speed, posInit, posDes;
+int speed, posInit, posDes, posNow;
 unsigned char gain;
 unsigned char enablePositionSpeed;
 unsigned char checkLine;
@@ -41,7 +41,7 @@ void speedPIDControl(int speed);
 void* CheckDistance(void *arg);
 void LoopCheckDistance(int sensorIndex, int wantDistance, unsigned char isUp);
 void LineStopThread();
-void* ValanceThread(void *arg);
+void ValanceCar();
 
 
 #ifdef __cplusplus

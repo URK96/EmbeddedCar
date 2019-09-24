@@ -388,9 +388,26 @@ void * input_thread(void *arg)
     return NULL;
 }
 
+void* ControlThread(void *arg)
+{
+    enablePositionSpeed = 0;
+
+    sleep(2);
+
+    enablePositionSpeed = 1;
+
+    while (1)
+    {
+        FindDriveLine();
+        ValanceCar();
+
+        usleep(100);
+    }
+}
+
 void* MissionThread(void *arg)
 {
-    CarLight_Write(ALL_OFF);
+    /*CarLight_Write(ALL_OFF);
     checkLine = 1;
 
     LoopCheckDistance(1, 1000, 1);
@@ -421,7 +438,101 @@ void* MissionThread(void *arg)
 
     checkLine = 1;
     
-    return NULL;
+    return NULL;*/
+
+    int sub_degree = 1530;
+    int degree = 1530;
+    char sensor;
+
+    CameraXServoControl_Write(1500);
+
+    checkLine = 0;
+
+    Winker_Write(ALL_OFF);
+
+    LineStopThread();
+
+    CameraYServoControl_Write(1450);
+
+    TrafficLights light;
+
+    while (1)
+    {
+        light = FindTrafficLights();
+
+        if (light == GREEN || light == GREENARROW)
+            break;
+
+        printf("Light : %d\n", light);
+
+        usleep(5000);
+    }
+
+    if (light == GREEN)
+    {
+        Winker_Write(RIGHT_ON);
+        degree -= 400;
+        sub_degree += 100;
+        driveMode = CURVERIGHT;
+    }
+    else if (light == GREENARROW)
+    {
+        Winker_Write(LEFT_ON);
+        degree += 400;
+        sub_degree -= 100;
+        driveMode = CURVELEFT;
+    }
+
+    checkLine = 0;
+    enablePositionSpeed = 1;
+
+    SteeringServoControl_Write(sub_degree);
+
+    usleep(800000);
+
+    SteeringServoControl_Write(degree);
+    
+    sleep(6);
+
+    SteeringServoControl_Write(1530);
+
+    while (1)
+    {
+        sensor = LineSensor_Read();
+
+        if (sensor == 0)
+            break;
+
+        usleep(100);
+    }
+
+    usleep(1000000);
+
+    enablePositionSpeed = 0;
+
+    /*posNow = 0;
+
+    SteeringServoControl_Write(1530);
+
+    checkLine = 0;
+
+    usleep(4500000);
+
+    SteeringServoControl_Write(1900);
+
+    while (1)
+    {
+        if (posNow >= 31000)
+            break;
+        
+        usleep(1000);
+    }
+
+    SteeringServoControl_Write(1530);
+
+    sleep(1);
+
+    checkLine = 1;*/
 }
 
 void ParkingMission()
@@ -460,14 +571,14 @@ void TrafficLightMission()
     if (light == GREEN)
     {
         Winker_Write(RIGHT_ON);
-        degree -= 300;
+        degree -= 400;
         sub_degree += 100;
-        driveMode = CURVELEFT;
+        driveMode = CURVERIGHT;
     }
     else if (light == GREENARROW)
     {
         Winker_Write(LEFT_ON);
-        degree += 300;
+        degree += 400;
         sub_degree -= 100;
         driveMode = CURVELEFT;
     }
@@ -481,7 +592,7 @@ void TrafficLightMission()
 
     SteeringServoControl_Write(degree);
     
-    usleep(3000000);
+    sleep(4);
 
     SteeringServoControl_Write(1530);
 
@@ -609,13 +720,15 @@ int main(int argc, char **argv)
     //LoopCheckDistance(0, 3000, 1);
 
     CameraXServoControl_Write(1500);
-    CameraYServoControl_Write(1755);  
+    CameraYServoControl_Write(1700);
+    SteeringServoControl_Write(1530);
 
     posInit = 0;
-    posDes = 200;
+    posDes = 300;
     gain = 10;
-    speed = 150;
+    speed = 200;
     enablePositionSpeed = 1;
+    checkLine = 1;
 
     pexam_data = &tdata;
 
@@ -625,7 +738,7 @@ int main(int argc, char **argv)
     }
     pthread_detach(tdata.threads[0]);
 
-    ret = pthread_create(&tdata.threads[1], NULL, capture_dump_thread, &tdata);
+    /*ret = pthread_create(&tdata.threads[1], NULL, capture_dump_thread, &tdata);
     if(ret) {
         MSG("Failed creating capture dump thread");
     }
@@ -635,9 +748,9 @@ int main(int argc, char **argv)
     if(ret) {
         MSG("Failed creating input thread");
     }
-    pthread_detach(tdata.threads[2]);
+    pthread_detach(tdata.threads[2]);*/
 
-    ret = pthread_create(&tdata.threads[3], NULL, ValanceThread, &tdata);
+    ret = pthread_create(&tdata.threads[3], NULL, ControlThread, &tdata);
     if(ret) {
         MSG("Failed creating input thread");
     }
@@ -649,17 +762,17 @@ int main(int argc, char **argv)
     }
     pthread_detach(tdata.threads[4]);
 
-    ret = pthread_create(&tdata.threads[5], NULL, MissionThread, &tdata);
+    /*ret = pthread_create(&tdata.threads[5], NULL, MissionThread, &tdata);
     if(ret) {
         MSG("Failed creating input thread");
     }
-    pthread_detach(tdata.threads[5]);
+    pthread_detach(tdata.threads[5]);*/
 
-    ret = pthread_create(&tdata.threads[6], NULL, CheckDistance, &tdata);
+    /*ret = pthread_create(&tdata.threads[6], NULL, CheckDistance, &tdata);
     if(ret) {
         MSG("Failed creating input thread");
     }
-    pthread_detach(tdata.threads[6]);
+    pthread_detach(tdata.threads[6]);*/
 
     /* register signal handler for <CTRL>+C in order to clean up */
     if(signal(SIGINT, signal_handler) == SIG_ERR) {

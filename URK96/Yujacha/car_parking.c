@@ -68,7 +68,7 @@ void ParallelParking()
     LoopCheckDistance(3, 500, 1);
 
 
-    // Start cehck back wall (Handling)
+    // Start check back wall (Handling)
 
     SteeringServoControl_Write(1950);
 
@@ -80,7 +80,7 @@ void ParallelParking()
 
     printf("Check 4rd back distance...\n");
 
-    LoopCheckDistance(3, 2500, 1);
+    LoopCheckDistance(3, 2400, 1);
 
     printf("Stop Vehicle!\n");
 
@@ -104,7 +104,7 @@ void ParallelParking()
 
     speedPIDControl(-10);
 
-    LoopCheckDistance(3, 4000, 1);
+    LoopCheckDistance(3, 3600, 1);
 
     printf("Stop Vehicle!\n");
 
@@ -158,7 +158,7 @@ void ParallelParking()
     
     SteeringServoControl_Write(1100);
 
-    usleep(2000000);
+    usleep(2500000);
 
     posDes = 200;
     speed = 150;
@@ -198,12 +198,12 @@ void VerticalParking()
 
     printf("Check 2nd-2 Wall No.2 Sensor distance...\n");
 
-    usleep(1500000);
+    sleep(1);
 
 
     // Start backward movement
 
-    enablePositionSpeed = 0;
+    enablePositionSpeed = false;
     printf("Stop Vehicle!\n");
 
     SteeringServoControl_Write(1100);
@@ -217,13 +217,9 @@ void VerticalParking()
 
     sleep(2);
 
-    LoopCheckDistance(4, 1800, 1);
+    LoopCheckDistance(4, 1800, 0);
 
     SteeringServoControl_Write(1300);
-
-    //LoopCheckDistance(3, 500, 0);
-
-    //LoopCheckDistance(3, 700, 1);
 
     usleep(500000);
 
@@ -239,17 +235,13 @@ void VerticalParking()
 
     sleep(2);
 
-    /*enablePositionSpeed = 1;
+    enablePositionSpeed = 1;
 
     LoopCheckDistance(1, 500, 0);
 
     SteeringServoControl_Write(1100);
 
-    LoopCheckDistance(4, 500, 0);
+    sleep(3);
 
-    SteeringServoControl_Write(1400);
-
-    usleep(500000);
-
-    SteeringServoControl_Write(1530);*/
+    SteeringServoControl_Write(1530);
 }

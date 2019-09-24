@@ -65,8 +65,8 @@ typedef enum TrafficLights
 const unsigned char H = 0, S = 1, V = 2;
 
 void ConvertImageForLCD(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh);
-CvPoint CalVanishPoint(CvPoint pt1, CvPoint pt2, CvPoint pt3, CvPoint pt4);
-void FindDriveLine(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh);
+//CvPoint CalVanishPoint(CvPoint pt1, CvPoint pt2, CvPoint pt3, CvPoint pt4);
+void FindDriveLine();
 int CheckStopSign(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh);
 TrafficLights FindTrafficLights();
 

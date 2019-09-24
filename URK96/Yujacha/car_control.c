@@ -10,6 +10,8 @@ void* positionSpeedControl(void *arg)
 {
     int position = 0, posRead = 0;
 
+    EncoderCounter_Write(posInit);
+
     while (1)
     {
         if (enablePositionSpeed)
@@ -19,11 +21,15 @@ void* positionSpeedControl(void *arg)
             
             DesireSpeed_Write(speed);
             PositionProportionPoint_Write(gain);
-            EncoderCounter_Write(posInit);
             
-            position = posInit + posDes;
-            DesireEncoderCount_Write(position);
+            position = position + posDes;
+            DesireEncoderCount_Write(posDes);
+            EncoderCounter_Write(position);
         }
+
+        posNow = EncoderCounter_Read();
+
+        //printf("%d\n", posNow);
         
         usleep(100000);
     }
@@ -50,7 +56,7 @@ void* CheckDistance(void *arg)
         for (i = 0; i < 6; ++i)
             distance[i] = DistanceSensor(distanceChannels[i]);
 
-        printf("%d %d %d %d %d %d\n", distance[0], distance[1], distance[2], distance[3], distance[4], distance[5]);
+        //printf("%d %d %d %d %d %d\n", distance[0], distance[1], distance[2], distance[3], distance[4], distance[5]);
         usleep(100000);
     }
 }
@@ -98,154 +104,62 @@ void LineStopThread()
     }
 }
 
-void* ValanceThread(void *arg)
+void ValanceCar()
 {
-    struct thr_data *data = (struct thr_data *)arg;
     int valanceDegree = 1530;
     int centerX = 160;
 
     float centerRightTheta = 2.20;
+    float centerLeftTheta = 1.70;
+     
+    float gap = driveLine.rightLine.theta - centerRightTheta;
+    float gapDiff = 0.05;
+    int gapTick = gap / gapDiff;
+    int sleepTick = 10000;
+    int steerP = 50;
 
-    SteeringServoControl_Write(valanceDegree);
+    printf("Check Drive Mode \n");
+    printf("left : %f, right : %f\n", driveLine.leftLine.theta, driveLine.rightLine.theta);
 
-    while (1)
+    if (driveMode == STRAIGHT)
     {
-        if (checkLine)
+        printf("Drive Mode : Straight\n");
+
+        if (gap <= -gapDiff)
         {
-            /*int gap = vanishP.x - centerX;
-            int gapDiff = 20;
-            int gapTick = gap / gapDiff;
-            int sleepTick = 1000000;
-
-            if (driveMode == STRAIGHT)
-            {
-                if (gap <= -gapDiff)
-                {
-                    SteeringServoControl_Write(valanceDegree + gapTick * 40);
-                    usleep(sleepTick);
-                    SteeringServoControl_Write(valanceDegree - gapTick * 40);
-                    usleep(sleepTick);
-                    SteeringServoControl_Write(valanceDegree);
-                }
-                else if (gap >= gapDiff)
-                {
-                    SteeringServoControl_Write(valanceDegree - gapTick * 40);
-                    usleep(sleepTick);
-                    SteeringServoControl_Write(valanceDegree + gapTick * 40);
-                    usleep(sleepTick);
-                    SteeringServoControl_Write(valanceDegree);
-                }
-                else
-                    SteeringServoControl_Write(valanceDegree);
-            }
-            else if (driveMode == CURVERIGHT)
-            {
-                int steerDegree = valanceDegree;
-                int cameraXDegree = 1500;
-
-                while (steerDegree <= 1900)
-                {
-                    steerDegree += 50;
-                    cameraXDegree += 20;
-                    SteeringServoControl_Write(steerDegree);
-                    CameraXServoControl_Write(cameraXDegree);
-                }
-            }
-            else if (driveMode == CURVELEFT)
-            {
-
-            }*/
-
+            printf("left -> center\n");
+            SteeringServoControl_Write(valanceDegree + gapTick * 140);
+            usleep(sleepTick);
+            SteeringServoControl_Write(valanceDegree - gapTick * 100);
+            usleep(sleepTick);
+            SteeringServoControl_Write(valanceDegree);
             
-            float gap = driveLine.rightLine.theta - centerRightTheta;
-            float gapDiff = 0.05;
-            int gapTick = gap / gapDiff;
-            int sleepTick = 500000;
-            int steerP = 50;
-
-            printf("Check Drive Mode \n");
-            printf("left theta : %f, right theta : %f\n", driveLine.leftLine.theta, driveLine.rightLine.theta);
-
-            if (driveMode == STRAIGHT)
-            {
-                printf("Drive Mode : Straight\n");
-
-                if (gap <= -gapDiff)
-                {
-                    printf("left -> center\n");
-                    SteeringServoControl_Write(valanceDegree + gapTick * 140);
-                    usleep(sleepTick);
-                    SteeringServoControl_Write(valanceDegree - gapTick * 100);
-                    usleep(sleepTick);
-                    SteeringServoControl_Write(valanceDegree);
-                    //usleep(100000);
-                }
-                else if (gap >= gapDiff)
-                {
-                    printf("right -> center\n");
-                    SteeringServoControl_Write(valanceDegree + gapTick * 140);
-                    usleep(sleepTick);
-                    SteeringServoControl_Write(valanceDegree - gapTick * 100);
-                    usleep(sleepTick);
-                    SteeringServoControl_Write(valanceDegree);
-                    //usleep(100000);
-                }
-                else
-                    SteeringServoControl_Write(valanceDegree);
-            } 
-            else if (driveMode == CURVERIGHT)
-            {
-                printf("Drive Mode : CurveRight\n");
-
-                //usleep(1000000);
-
-                //SteeringServoControl_Write(valanceDegree + 100);
-                //usleep(500000);
-                SteeringServoControl_Write(valanceDegree - 450);
-
-                while (1)
-                {
-                    if (driveMode == STRAIGHT)
-                    {
-                        SteeringServoControl_Write(valanceDegree);
-                        break;
-                    }
-
-                    usleep(5000);
-                }
-            }
-            else if (driveMode == CURVELEFT)
-            {
-                printf("Drive Mode : CurveLeft\n");
-
-                //usleep(500000);
-
-                //SteeringServoControl_Write(valanceDegree - 100);
-                //usleep(500000);
-                SteeringServoControl_Write(valanceDegree + 450);
-
-                while (1)
-                {
-                    if (driveMode == STRAIGHT)
-                    {
-                        SteeringServoControl_Write(valanceDegree);
-                        break;
-                    }
-
-                    usleep(5000);
-                }
-            }
-
-            if (driveMode == STRAIGHT)
-                usleep(5000);
+        }
+        else if (gap >= gapDiff)
+        {
+            printf("right -> center\n");
+            SteeringServoControl_Write(valanceDegree + gapTick * 140);
+            usleep(sleepTick);
+            SteeringServoControl_Write(valanceDegree - gapTick * 100);
+            usleep(sleepTick);
+            SteeringServoControl_Write(valanceDegree);
+            
         }
         else
-        {
-            usleep(5000);
-        }
-        
+            SteeringServoControl_Write(valanceDegree);
+    } 
+    else if (driveMode == CURVERIGHT)
+    {
+        printf("Drive Mode : CurveRight\n");
+
+        SteeringServoControl_Write(valanceDegree - 450);
+
     }
+    else if (driveMode == CURVELEFT)
+    {
+        printf("Drive Mode : CurveLeft\n");
 
+        SteeringServoControl_Write(valanceDegree + 450);
 
-    return NULL;
+    }
 }
