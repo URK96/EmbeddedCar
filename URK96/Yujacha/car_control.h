@@ -31,7 +31,7 @@ unsigned char enablePositionSpeed;
 unsigned char checkLine;
 //unsigned char missionSequence = 0;
 
-int enableCheckDistance = 0;
+unsigned char enableCheckDistance;
 int distance[6];
 
 DriveLine driveLine;

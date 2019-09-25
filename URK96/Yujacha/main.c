@@ -388,15 +388,23 @@ void * input_thread(void *arg)
     return NULL;
 }
 
+
+void RotaryMission()
+{
+
+}
+
 void* ControlThread(void *arg)
 {
     int stopCount = 0;
 
+    enableCheckDistance = 1;
     enablePositionSpeed = 0;
 
     LoopCheckDistance(0, 3000, 1);
     sleep(2);
 
+    enableCheckDistance = 0;
     enablePositionSpeed = 1;
 
     while (1)
@@ -423,16 +431,57 @@ void* ControlThread(void *arg)
 
                     enablePositionSpeed = 1;
                     checkLine = 1;
+                    enableCheckDistance = 1;
                     mSequence = 2;
                 }
                 break;
-            case 2: // Parking Mission
+            case 2: // Parallel Parking Mission
+                if (distance[1] >= 1000)
+                {
+                    ParallelParking();
+                    
+                    mSequence = 3;
+                }
                 break;
-            case 3:
+            case 3: // Vertical Parking Mission
+                if (distance[1] >= 1000)
+                {
+                    VerticalParking();
+
+                    mSequence = 4;
+                }
                 break;
-            case 4:
+            case 4: // Rotary Mission
+                if (!enablePositionSpeed)
+                {
+                    LoopCheckDistance(0, 1000, 1);
+                    LoopCheckDistance(0, 200, 0);
+
+                    // Rotary Function
+                    RotaryMission();
+
+                    mSequence = 5;
+                }
                 break;
-            case 5:
+            case 5: // Tunnel Mission
+                if ((distance[1] >= 1500) && (distance[5] >= 1500))
+                {
+                    // Tunnel Mission
+
+                    mSequence = 6;
+                }
+                break;
+            case 6: // Pass Misson
+                if (distance[0] >= 1500)
+                {
+                    // Pass Function
+
+                    mSequence = 7;
+                }
+                break;
+            case 7: // Traffic Light Mission
+                if (!enablePositionSpeed == 0)
+                    // Traffic Light Function
                 break;
         }
 
