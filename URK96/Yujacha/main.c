@@ -83,7 +83,7 @@ struct thr_data {
 };
 
 /* variable declare */
-unsigned char sequence = 0;
+unsigned char mSequence = 0;
 
 /**
   * @brief  Alloc vpe input buffer and a new buffer object
@@ -390,8 +390,11 @@ void * input_thread(void *arg)
 
 void* ControlThread(void *arg)
 {
+    int stopCount = 0;
+
     enablePositionSpeed = 0;
 
+    LoopCheckDistance(0, 3000, 1);
     sleep(2);
 
     enablePositionSpeed = 1;
@@ -400,6 +403,38 @@ void* ControlThread(void *arg)
     {
         FindDriveLine();
         ValanceCar();
+
+        if (enableCheckDistance)
+            CheckDistance();
+
+        switch (mSequence)
+        {
+            case 0:
+                break;
+            case 1: // Stop Sign Mission
+                stopCount = CheckStopSign();
+
+                if (stopCount >= 100)
+                {
+                    enablePositionSpeed = 0;
+                    checkLine = 0;
+
+                    while (stopCount = CheckStopSign() >= 20) { }
+
+                    enablePositionSpeed = 1;
+                    checkLine = 1;
+                    mSequence = 2;
+                }
+                break;
+            case 2: // Parking Mission
+                break;
+            case 3:
+                break;
+            case 4:
+                break;
+            case 5:
+                break;
+        }
 
         usleep(100);
     }

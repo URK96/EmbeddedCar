@@ -193,18 +193,17 @@ void FindDriveLine()
 	}
 }
 
-int CheckStopSign(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, int nw, int nh)
+int CheckStopSign()
 {
     int i, j;
 	unsigned int stopSignCnt = 0;
     
     Mat srcHSV;
-    Mat dstHSV;
 
     cvtColor(srcRGB, srcHSV, CV_BGR2HSV);
 
     IplImage *iplImage = new IplImage(srcHSV);
-    IplImage *dstImage = new IplImage(srcHSV);
+    //IplImage *dstImage = new IplImage(srcHSV);
 
 	for (i = 0; i < iplImage->height; i++)
 	{
@@ -219,17 +218,17 @@ int CheckStopSign(unsigned char* srcBuf, int iw, int ih, unsigned char* outBuf, 
 					(unsigned char)iplImage->imageData[i*iplImage->widthStep + 3 * j + V] <= SSR_highV
 				)
             {
-				dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)255;
+				/*dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)255;
                 dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)255;
-                dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)255;
+                dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)255;*/
 
                 stopSignCnt++;
 			}
 			else
 			{
-				dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)0;
+				/*dstImage->imageData[i*dstImage->widthStep + 3 * j + H] = (unsigned char)0;
                 dstImage->imageData[i*dstImage->widthStep + 3 * j + S] = (unsigned char)0;
-                dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)0;
+                dstImage->imageData[i*dstImage->widthStep + 3 * j + V] = (unsigned char)0;*/
 			}
 		}
 	}

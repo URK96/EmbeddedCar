@@ -47,7 +47,7 @@ void speedPIDControl(int speed)
     DesireSpeed_Write(speed);
 }
 
-void* CheckDistance(void *arg)
+void CheckDistance()
 {
     int i;
 
