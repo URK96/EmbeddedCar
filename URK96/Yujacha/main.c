@@ -394,6 +394,118 @@ void RotaryMission()
 
 }
 
+void TunnelMission()
+{
+    CarLight_Write(ALL_OFF);
+    checkLine = 1;
+
+    LoopCheckDistance(1, 1000, 1);
+    LoopCheckDistance(5, 1000, 1);
+
+    checkLine = 0;
+
+    int i;
+    int angle_l = 1600;
+    int angle_r = 1400;
+
+    CarLight_Write(ALL_ON);
+
+    while (1)
+    {		
+	    if(distance[1] > distance[5])
+            SteeringServoControl_Write(angle_l);
+	    else if(distance[1] < distance[5])
+			SteeringServoControl_Write(angle_r);
+
+        if (distance[1] < 500 || distance[5] < 500)
+            break;
+
+        usleep(100000);
+    }
+
+    CarLight_Write(ALL_OFF);
+
+    checkLine = 1;
+}
+
+void PassMission()
+{
+
+}
+
+void TrafficLightMission()
+{
+    int sub_degree = 1530;
+    int degree = 1530;
+    char sensor;
+
+    TrafficLights light;
+
+    CameraXServoControl_Write(1500);
+
+    checkLine = 0;
+
+    Winker_Write(ALL_OFF);
+
+    LineStopThread();
+
+    CameraYServoControl_Write(1450);
+
+    while (1)
+    {
+        light = FindTrafficLights();
+
+        if (light == GREEN || light == GREENARROW)
+            break;
+
+        //printf("Light : %d\n", light);
+
+        usleep(5000);
+    }
+
+    if (light == GREEN)
+    {
+        Winker_Write(RIGHT_ON);
+        degree -= 400;
+        sub_degree += 100;
+        driveMode = CURVERIGHT;
+    }
+    else if (light == GREENARROW)
+    {
+        Winker_Write(LEFT_ON);
+        degree += 400;
+        sub_degree -= 100;
+        driveMode = CURVELEFT;
+    }
+
+    checkLine = 0;
+    enablePositionSpeed = 1;
+
+    SteeringServoControl_Write(sub_degree);
+
+    usleep(800000);
+
+    SteeringServoControl_Write(degree);
+    
+    sleep(6);
+
+    SteeringServoControl_Write(1530);
+
+    while (1)
+    {
+        sensor = LineSensor_Read();
+
+        if (sensor == 0)
+            break;
+
+        usleep(100);
+    }
+
+    usleep(1000000);
+
+    enablePositionSpeed = 0;
+}
+
 void* ControlThread(void *arg)
 {
     int stopCount = 0;
@@ -457,7 +569,6 @@ void* ControlThread(void *arg)
                     LoopCheckDistance(0, 1000, 1);
                     LoopCheckDistance(0, 200, 0);
 
-                    // Rotary Function
                     RotaryMission();
 
                     mSequence = 5;
@@ -466,7 +577,7 @@ void* ControlThread(void *arg)
             case 5: // Tunnel Mission
                 if ((distance[1] >= 1500) && (distance[5] >= 1500))
                 {
-                    // Tunnel Mission
+                    TunnelMission();
 
                     mSequence = 6;
                 }
@@ -474,14 +585,14 @@ void* ControlThread(void *arg)
             case 6: // Pass Misson
                 if (distance[0] >= 1500)
                 {
-                    // Pass Function
+                    PassMission();
 
                     mSequence = 7;
                 }
                 break;
             case 7: // Traffic Light Mission
                 if (!enablePositionSpeed == 0)
-                    // Traffic Light Function
+                    TrafficLightMission();
                 break;
         }
 
@@ -491,109 +602,6 @@ void* ControlThread(void *arg)
 
 void* MissionThread(void *arg)
 {
-    /*CarLight_Write(ALL_OFF);
-    checkLine = 1;
-
-    LoopCheckDistance(1, 1000, 1);
-    LoopCheckDistance(5, 1000, 1);
-
-    checkLine = 0;
-
-    int i;
-    int angle_l = 1600;
-    int angle_r = 1400;
-
-    CarLight_Write(ALL_ON);
-
-    while (1)
-    {		
-	    if(distance[1] > distance[5])
-            SteeringServoControl_Write(angle_l);
-	    else if(distance[1] < distance[5])
-			SteeringServoControl_Write(angle_r);
-
-        if (distance[1] < 500 || distance[5] < 500)
-            break;
-
-        usleep(100000);
-    }
-
-    CarLight_Write(ALL_OFF);
-
-    checkLine = 1;
-    
-    return NULL;*/
-
-    int sub_degree = 1530;
-    int degree = 1530;
-    char sensor;
-
-    CameraXServoControl_Write(1500);
-
-    checkLine = 0;
-
-    Winker_Write(ALL_OFF);
-
-    LineStopThread();
-
-    CameraYServoControl_Write(1450);
-
-    TrafficLights light;
-
-    while (1)
-    {
-        light = FindTrafficLights();
-
-        if (light == GREEN || light == GREENARROW)
-            break;
-
-        printf("Light : %d\n", light);
-
-        usleep(5000);
-    }
-
-    if (light == GREEN)
-    {
-        Winker_Write(RIGHT_ON);
-        degree -= 400;
-        sub_degree += 100;
-        driveMode = CURVERIGHT;
-    }
-    else if (light == GREENARROW)
-    {
-        Winker_Write(LEFT_ON);
-        degree += 400;
-        sub_degree -= 100;
-        driveMode = CURVELEFT;
-    }
-
-    checkLine = 0;
-    enablePositionSpeed = 1;
-
-    SteeringServoControl_Write(sub_degree);
-
-    usleep(800000);
-
-    SteeringServoControl_Write(degree);
-    
-    sleep(6);
-
-    SteeringServoControl_Write(1530);
-
-    while (1)
-    {
-        sensor = LineSensor_Read();
-
-        if (sensor == 0)
-            break;
-
-        usleep(100);
-    }
-
-    usleep(1000000);
-
-    enablePositionSpeed = 0;
-
     /*posNow = 0;
 
     SteeringServoControl_Write(1530);
