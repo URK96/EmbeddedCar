@@ -391,7 +391,25 @@ void * input_thread(void *arg)
 
 void RotaryMission()
 {
+    checkLine = 0;
+    enablePositionSpeed = 1;
 
+    sleep(1);
+
+    checkLine = 1;
+
+    LoopCheckDistance(0, 1500, 1);
+
+    enablePositionSpeed = 0;
+
+    LoopCheckDistance(3, 1500, 1);
+
+    checkLine = 0;
+    enablePositionSpeed = 1;
+
+    while (driveMode != STRAIGHT);
+
+    checkLine = 1;
 }
 
 void TunnelMission()
@@ -430,7 +448,43 @@ void TunnelMission()
 
 void PassMission()
 {
+    int valanceDegree = 1530;
+    int subDegree = 350;
+    int rSubDegree = valanceDegree - subDegree;
+    int lSubDegree = valanceDegree + subDegree;
 
+    enablePositionSpeed = 0;
+
+    speedPIDControl(-20);
+
+    LoopCheckDistance(0, 300, 0);
+
+    speedPIDControl(0);
+
+    enablePositionSpeed = 1;
+
+    SteeringServoControl_Write(lSubDegree);
+
+    sleep(1);
+
+    SteeringServoControl_Write(rSubDegree);
+
+    sleep(1);
+
+    SteeringServoControl_Write(valanceDegree);
+
+    LoopCheckDistance(1, 2000, 1);
+    LoopCheckDistance(1, 1000, 0);
+
+    SteeringServoControl_Write(rSubDegree);
+
+    sleep(1);
+
+    SteeringServoControl_Write(lSubDegree);
+
+    sleep(1);
+
+    SteeringServoControl_Write(valanceDegree;)
 }
 
 void TrafficLightMission()
