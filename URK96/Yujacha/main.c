@@ -389,6 +389,15 @@ void * input_thread(void *arg)
 }
 
 
+void DownHillMission()
+{
+    checkLine = 0;
+
+    while ((driveLine.leftLine.theta == 0) && (driveLine.rightLine.theta == 0));
+
+    checkLine = 1;
+}
+
 void RotaryMission()
 {
     checkLine = 0;
@@ -583,7 +592,12 @@ void* ControlThread(void *arg)
 
         switch (mSequence)
         {
-            case 0:
+            case 0: // Down Hill Mission
+                if ((driveLine.leftLine.theta == 0) && (driveLine.rightLine.theta == 0))
+                {
+                    DownHillMission();
+                    mSequence = 1;
+                }
                 break;
             case 1: // Stop Sign Mission
                 stopCount = CheckStopSign();
